@@ -1,0 +1,17 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "c:\\users\\admin\\desktop\\eclipse\\eclipse\\intermediate\\build\\win64\\unrealeditor\\inc\\eclipse\\uht\\sidescrollingmovingplatform.gen.cpp",
+        "ProvidedModule": "",
+        "PCH": "c:\\users\\admin\\desktop\\eclipse\\eclipse\\intermediate\\build\\win64\\x64\\eclipseeditor\\development\\unrealed\\sharedpch.unrealed.project.valapi.valexpapi.cpp20.h.pch",
+        "Includes": [
+            "c:\\users\\admin\\desktop\\eclipse\\eclipse\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\eclipse\\definitions.eclipse.h",
+            "c:\\users\\admin\\desktop\\eclipse\\eclipse\\source\\eclipse\\variant_sidescrolling\\gameplay\\sidescrollingmovingplatform.h",
+            "c:\\users\\admin\\desktop\\eclipse\\eclipse\\source\\eclipse\\variant_sidescrolling\\sidescrollinginteractable.h",
+            "c:\\users\\admin\\desktop\\eclipse\\eclipse\\intermediate\\build\\win64\\unrealeditor\\inc\\eclipse\\uht\\sidescrollinginteractable.generated.h",
+            "c:\\users\\admin\\desktop\\eclipse\\eclipse\\intermediate\\build\\win64\\unrealeditor\\inc\\eclipse\\uht\\sidescrollingmovingplatform.generated.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}
