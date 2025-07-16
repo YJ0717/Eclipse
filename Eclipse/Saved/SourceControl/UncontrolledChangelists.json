@@ -6,9 +6,22 @@
 			"description": "Default Uncontrolled Changelist",
 			"files": [
 				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/test/NewWorld.umap",
-				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/ThirdPerson/Blueprints/NewBlueprint.uasset",
-				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/test/player.uasset",
-				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/ThirdPerson/Blueprints/BP_ThirdPersonGameMode.uasset"
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/ThirdPerson/Blueprints/BP_ThirdPersonGameMode.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/DH_VFX/desert_soil_scatter_tl0gedmka_8k/Desert_Soil_Scatter_tl0gedmka_8K_Opacity.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/test/BP_Player.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/test/AB_Player.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/ShadowKight/Animations/Player_JumpDown.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/ShadowKight/Animations/ThirdPerson_Jump.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/ShadowKight/Animations/Player_JumpIdle.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/ShadowKight/Animations/ThirdPersonJump_Loop.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/ShadowKight/Animations/Player_JumpUP.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/ShadowKight/Animations/ThirdPersonJump_Start.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/test/BS_Player.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/ShadowKight/Animations/Anim_ShadowKight.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/test/AP_Player.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/test/Player.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/test/NewAnimBlueprint.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/ThirdPerson/Blueprints/NewBlueprint.uasset"
 			]
 		}
 	]
