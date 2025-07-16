@@ -1,0 +1,15 @@
+{
+	"version": 1,
+	"changelists": [
+		{
+			"guid": "00000000000000000000000000000000",
+			"description": "Default Uncontrolled Changelist",
+			"files": [
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/test/NewWorld.umap",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/ThirdPerson/Blueprints/NewBlueprint.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/test/player.uasset",
+				"C:/Users/Admin/Desktop/Eclipse/Eclipse/Content/ThirdPerson/Blueprints/BP_ThirdPersonGameMode.uasset"
+			]
+		}
+	]
+}
