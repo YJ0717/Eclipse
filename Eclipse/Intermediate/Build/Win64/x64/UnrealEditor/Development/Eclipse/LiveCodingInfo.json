@@ -24,7 +24,6 @@
 			"CombatStateTreeUtility.gen.cpp.obj"
 		],
 		"Module.Eclipse.2.cpp.obj": [
-			"Eclipse.init.gen.cpp.obj",
 			"EclipseCharacter.gen.cpp.obj",
 			"EclipseGameMode.gen.cpp.obj",
 			"EclipsePlayerController.gen.cpp.obj",
@@ -60,6 +59,11 @@
 			"AnimNotify_CheckChargedAttack.cpp.obj",
 			"AnimNotify_CheckCombo.cpp.obj",
 			"AnimNotify_DoAttackTrace.cpp.obj",
+			"Eclipse.init.gen.cpp.obj",
+			"Sg1Monster1.gen.cpp.obj",
+			"Sg1Monster1.cpp.obj"
+		],
+		"Module.Eclipse.3.cpp.obj": [
 			"CombatActivatable.cpp.obj",
 			"CombatActivationVolume.cpp.obj",
 			"CombatAttacker.cpp.obj",
@@ -77,9 +81,7 @@
 			"PlatformingGameMode.cpp.obj",
 			"PlatformingPlayerController.cpp.obj",
 			"SideScrollingAIController.cpp.obj",
-			"SideScrollingNPC.cpp.obj"
-		],
-		"Module.Eclipse.3.cpp.obj": [
+			"SideScrollingNPC.cpp.obj",
 			"SideScrollingStateTreeUtility.cpp.obj",
 			"SideScrollingJumpPad.cpp.obj",
 			"SideScrollingMovingPlatform.cpp.obj",

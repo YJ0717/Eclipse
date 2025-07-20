@@ -66,6 +66,12 @@
     <ClInclude Include="..\..\Source\Eclipse\PlayerCharacter.h">
       <Filter>Source\Eclipse</Filter>
     </ClInclude>
+    <ClCompile Include="..\..\Source\Eclipse\Sg1Monster1.cpp">
+      <Filter>Source\Eclipse</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\Eclipse\Sg1Monster1.h">
+      <Filter>Source\Eclipse</Filter>
+    </ClInclude>
     <Filter Include="Source\Eclipse\Variant_Combat">
       <UniqueIdentifier>{62E064FD-658E-3BD3-B832-A9A2AC6DE7FC}</UniqueIdentifier>
     </Filter>
