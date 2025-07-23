@@ -59,17 +59,15 @@
 			"AnimNotify_CheckChargedAttack.cpp.obj",
 			"AnimNotify_CheckCombo.cpp.obj",
 			"AnimNotify_DoAttackTrace.cpp.obj",
+			"Eclipse.init.gen.cpp.obj",
+			"Sg1Monster1.gen.cpp.obj",
+			"Sg1Monster1.cpp.obj"
+		],
+		"Module.Eclipse.3.cpp.obj": [
 			"CombatActivatable.cpp.obj",
 			"CombatActivationVolume.cpp.obj",
 			"CombatAttacker.cpp.obj",
 			"CombatCharacter.cpp.obj",
-			"Eclipse.init.gen.cpp.obj",
-			"Sg1Monster1.gen.cpp.obj",
-			"Sg1MonsterAIController.gen.cpp.obj",
-			"Sg1Monster1.cpp.obj",
-			"Sg1MonsterAIController.cpp.obj"
-		],
-		"Module.Eclipse.3.cpp.obj": [
 			"CombatCheckpointVolume.cpp.obj",
 			"CombatDamageable.cpp.obj",
 			"CombatDamageableBox.cpp.obj",
