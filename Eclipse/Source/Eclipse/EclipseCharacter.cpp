@@ -39,13 +39,19 @@ AEclipseCharacter::AEclipseCharacter()
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 400.0f;
-	CameraBoom->bUsePawnControlRotation = true;
+	CameraBoom->TargetArmLength = 250.0f; // Adjusted for closer, over-the-shoulder view
+	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
+	CameraBoom->SocketOffset = FVector(0.0f, 50.0f, 50.0f); // Offset camera to the right and slightly up
+	CameraBoom->bDoCollisionTest = true; // Enable collision test for camera boom
+	CameraBoom->bEnableCameraLag = true; // Enable camera lag for smoother movement
+	CameraBoom->CameraLagSpeed = 10.0f; // Adjust lag speed as needed
+	CameraBoom->bEnableCameraRotationLag = true; // Enable camera rotation lag for smoother rotation
+	CameraBoom->CameraRotationLagSpeed = 10.0f; // Adjust rotation lag speed as needed
 
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-	FollowCamera->bUsePawnControlRotation = false;
+	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
