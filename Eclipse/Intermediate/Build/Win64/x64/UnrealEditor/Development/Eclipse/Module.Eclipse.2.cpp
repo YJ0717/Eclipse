@@ -24,6 +24,7 @@
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Intermediate/Build/Win64/UnrealEditor/Inc/Eclipse/UHT/SideScrollingUI.gen.cpp"
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Intermediate/Build/Win64/x64/UnrealEditor/Development/Eclipse/PerModuleInline.gen.cpp"
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/Eclipse.cpp"
+#include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/EclipseCharacter.cpp"
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/EclipseGameMode.cpp"
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/EclipsePlayerController.cpp"
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/PlayerCharacter.cpp"

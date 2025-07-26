@@ -24,7 +24,6 @@
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Intermediate/Build/Win64/UnrealEditor/Inc/Eclipse/UHT/SideScrollingUI.gen.cpp"
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Intermediate/Build/Win64/x64/UnrealEditor/Development/Eclipse/PerModuleInline.gen.cpp"
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/Eclipse.cpp"
-#include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/EclipseCharacter.cpp"
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/EclipseGameMode.cpp"
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/EclipsePlayerController.cpp"
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/PlayerCharacter.cpp"
@@ -35,4 +34,3 @@
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/Variant_Combat/AI/CombatStateTreeUtility.cpp"
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/Variant_Combat/AI/EnvQueryContext_Player.cpp"
 #include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/Variant_Combat/AnimNotify_CheckChargedAttack.cpp"
-#include "C:/Users/Admin/Desktop/Eclipse/Eclipse/Source/Eclipse/Variant_Combat/AnimNotify_CheckCombo.cpp"
