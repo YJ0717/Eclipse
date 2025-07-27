@@ -24,7 +24,6 @@
 			"CombatStateTreeUtility.gen.cpp.obj"
 		],
 		"Module.Eclipse.2.cpp.obj": [
-			"Eclipse.init.gen.cpp.obj",
 			"EclipseCharacter.gen.cpp.obj",
 			"EclipseGameMode.gen.cpp.obj",
 			"EclipsePlayerController.gen.cpp.obj",
@@ -32,7 +31,6 @@
 			"PlatformingCharacter.gen.cpp.obj",
 			"PlatformingGameMode.gen.cpp.obj",
 			"PlatformingPlayerController.gen.cpp.obj",
-			"PlayerCharacter.gen.cpp.obj",
 			"Sg1Monster1.gen.cpp.obj",
 			"SideScrollingAIController.gen.cpp.obj",
 			"SideScrollingCameraManager.gen.cpp.obj",
@@ -52,16 +50,18 @@
 			"EclipseCharacter.cpp.obj",
 			"EclipseGameMode.cpp.obj",
 			"EclipsePlayerController.cpp.obj",
-			"PlayerCharacter.cpp.obj",
 			"Sg1Monster1.cpp.obj",
 			"CombatAIController.cpp.obj",
 			"CombatEnemy.cpp.obj",
 			"CombatEnemySpawner.cpp.obj",
 			"CombatStateTreeUtility.cpp.obj",
-			"EnvQueryContext_Player.cpp.obj",
-			"AnimNotify_CheckChargedAttack.cpp.obj"
+			"Eclipse.init.gen.cpp.obj",
+			"PlayerCharacter.gen.cpp.obj",
+			"PlayerCharacter.cpp.obj"
 		],
 		"Module.Eclipse.3.cpp.obj": [
+			"EnvQueryContext_Player.cpp.obj",
+			"AnimNotify_CheckChargedAttack.cpp.obj",
 			"AnimNotify_CheckCombo.cpp.obj",
 			"AnimNotify_DoAttackTrace.cpp.obj",
 			"CombatActivatable.cpp.obj",

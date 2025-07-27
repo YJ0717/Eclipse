@@ -49,19 +49,19 @@
 			"SideScrollingUI.gen.cpp.obj",
 			"PerModuleInline.gen.cpp.obj",
 			"Eclipse.cpp.obj",
+			"EclipseCharacter.cpp.obj",
 			"EclipseGameMode.cpp.obj",
 			"EclipsePlayerController.cpp.obj",
-			"PlayerCharacter.cpp.obj",
 			"Sg1Monster1.cpp.obj",
 			"CombatAIController.cpp.obj",
 			"CombatEnemy.cpp.obj",
 			"CombatEnemySpawner.cpp.obj",
 			"CombatStateTreeUtility.cpp.obj",
-			"EnvQueryContext_Player.cpp.obj",
-			"AnimNotify_CheckChargedAttack.cpp.obj",
-			"EclipseCharacter.cpp.obj"
+			"PlayerCharacter.cpp.obj"
 		],
 		"Module.Eclipse.3.cpp.obj": [
+			"EnvQueryContext_Player.cpp.obj",
+			"AnimNotify_CheckChargedAttack.cpp.obj",
 			"AnimNotify_CheckCombo.cpp.obj",
 			"AnimNotify_DoAttackTrace.cpp.obj",
 			"CombatActivatable.cpp.obj",

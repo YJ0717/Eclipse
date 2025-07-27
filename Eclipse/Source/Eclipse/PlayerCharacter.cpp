@@ -8,6 +8,8 @@
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Components/StaticMeshComponent.h"
+#include "Animation/AnimInstance.h"
 
 // 기본값 설정
 APlayerCharacter::APlayerCharacter()
@@ -35,6 +37,13 @@ APlayerCharacter::APlayerCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // 카메라를 붐의 끝에 부착합니다.
 	FollowCamera->bUsePawnControlRotation = false; // 카메라가 암을 기준으로 회전하지 않도록 합니다.
+
+	// 도끼 컴포넌트를 생성합니다.
+	AxeComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Axe"));
+	AxeComponent->SetupAttachment(GetMesh(), FName("AxeSocket")); // 초기에는 등 소켓에 부착
+	AxeComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	bIsWeaponEquipped = false;
 }
 
 // 게임이 시작되거나 스폰될 때 호출됩니다.
@@ -69,6 +78,33 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		// 둘러보기
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Look);
+
+		// 무기 장착/해제
+		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Triggered, this, &APlayerCharacter::ToggleWeapon);
+	}
+}
+
+void APlayerCharacter::ToggleWeapon()
+{
+	if (bIsWeaponEquipped)
+	{
+		// 무기 해제
+		if (UnequipMontage)
+		{
+			PlayAnimMontage(UnequipMontage);
+			bIsWeaponEquipped = false;
+			AxeComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("AxeSocket"));
+		}
+	}
+	else
+	{
+		// 무기 장착
+		if (EquipMontage)
+		{
+			PlayAnimMontage(EquipMontage);
+			bIsWeaponEquipped = true;
+			AxeComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HandSocket"));
+		}
 	}
 }
 
