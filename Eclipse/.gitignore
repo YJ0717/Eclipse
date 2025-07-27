@@ -1,0 +1,124 @@
+# Visual Studio 2015
+.vs/
+*.VC.db
+*.VC.opendb
+*.sdf
+*.suo
+*.user
+*.sln.docstates
+
+# Unreal Engine
+.DS_Store
+.vscode/
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+*.log
+*.pdb
+*.exe
+*.dll
+*.lib
+*.exp
+*.ilk
+*.obj
+*.pch
+*.idb
+*.ipch
+*.res
+*.aps
+*.manifest
+*.ncb
+*.opensdf
+*.opensuo
+*.bak
+*.old
+*.tmp
+*.swp
+*.unr
+*.unx
+*.udk
+*.u
+*.config
+*.filters
+*.vcxproj
+*.vcxproj.user
+*.sln
+*.natvis
+*.opensdf
+*.opensuo
+*.user
+*.VC.db
+*.VC.opendb
+*.sdf
+*.suo
+*.user
+*.sln.docstates
+
+# DDC, Build, Intermediate, Saved folders
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# Logs
+*.log
+
+# Executables
+*.exe
+*.dll
+*.lib
+*.exp
+
+# Debug files
+*.pdb
+
+# Visual Studio files
+.vs/
+*.VC.db
+*.VC.opendb
+*.sdf
+*.suo
+*.user
+*.sln.docstates
+
+# Mac
+.DS_Store
+
+# Linux
+*.o
+*.a
+
+# Misc
+*.bak
+*.tmp
+*.swp
+*~
+
+# Unreal Engine specific
+*.uproject.bak
+*.uproject.user
+*.asset
+*.udatasmith
+
+# Crash reports
+CrashReportClient/
+
+# Packaged builds
+Packaged/
+
+# Source control
+.git/
+.gitattributes
+.gitignore
+
+# Rider
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Other
+Thumbs.db
