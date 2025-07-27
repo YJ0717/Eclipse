@@ -252,7 +252,6 @@
     <None Include="..\..\Eclipse.uproject"/>
     <None Include="..\..\Source\Eclipse.Target.cs"/>
     <None Include="..\..\Source\EclipseEditor.Target.cs"/>
-    <None Include="..\..\.vsconfig"/>
     <None Include="..\..\Config\DefaultEditor.ini"/>
     <None Include="..\..\Config\DefaultEditorPerProjectUserSettings.ini"/>
     <None Include="..\..\Config\DefaultEngine.ini"/>

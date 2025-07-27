@@ -1,0 +1,23 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "c:\\users\\admin\\desktop\\eclipse\\eclipse\\intermediate\\build\\win64\\unrealeditor\\inc\\eclipse\\uht\\sidescrollingplayercontroller.gen.cpp",
+        "ProvidedModule": "",
+        "PCH": "c:\\users\\admin\\desktop\\eclipse\\eclipse\\intermediate\\build\\win64\\x64\\eclipseeditor\\development\\unrealed\\sharedpch.unrealed.project.valapi.valexpapi.cpp20.h.pch",
+        "Includes": [
+            "c:\\users\\admin\\desktop\\eclipse\\eclipse\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\eclipse\\definitions.eclipse.h",
+            "c:\\users\\admin\\desktop\\eclipse\\eclipse\\source\\eclipse\\variant_sidescrolling\\sidescrollingplayercontroller.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\plugins\\enhancedinput\\source\\enhancedinput\\public\\inputaction.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\plugins\\enhancedinput\\source\\enhancedinput\\public\\inputmodifiers.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\plugins\\enhancedinput\\source\\enhancedinput\\public\\inputactionvalue.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\plugins\\enhancedinput\\intermediate\\build\\win64\\unrealeditor\\inc\\enhancedinput\\uht\\inputactionvalue.generated.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\plugins\\enhancedinput\\intermediate\\build\\win64\\unrealeditor\\inc\\enhancedinput\\uht\\inputmodifiers.generated.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\plugins\\enhancedinput\\source\\enhancedinput\\public\\inputtriggers.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\plugins\\enhancedinput\\intermediate\\build\\win64\\unrealeditor\\inc\\enhancedinput\\uht\\inputtriggers.generated.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\plugins\\enhancedinput\\intermediate\\build\\win64\\unrealeditor\\inc\\enhancedinput\\uht\\inputaction.generated.h",
+            "c:\\users\\admin\\desktop\\eclipse\\eclipse\\intermediate\\build\\win64\\unrealeditor\\inc\\eclipse\\uht\\sidescrollingplayercontroller.generated.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}
