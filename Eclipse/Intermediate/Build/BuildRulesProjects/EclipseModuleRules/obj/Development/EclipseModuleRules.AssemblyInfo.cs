@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("EclipseModuleRules")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Development")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ec0a0d423bf8ee5475187f0176e6acc7ca461e56")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+25ac33130b397880273e64d83e142bb28123b091")]
 [assembly: System.Reflection.AssemblyProductAttribute("EclipseModuleRules")]
 [assembly: System.Reflection.AssemblyTitleAttribute("EclipseModuleRules")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
