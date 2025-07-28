@@ -1,0 +1,19 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "c:\\users\\admin\\desktop\\eclipse\\eclipse\\intermediate\\build\\win64\\unrealeditor\\inc\\eclipse\\uht\\combatcheckpointvolume.gen.cpp",
+        "ProvidedModule": "",
+        "PCH": "c:\\users\\admin\\desktop\\eclipse\\eclipse\\intermediate\\build\\win64\\x64\\eclipseeditor\\development\\unrealed\\sharedpch.unrealed.project.valapi.valexpapi.cpp20.h.pch",
+        "Includes": [
+            "c:\\users\\admin\\desktop\\eclipse\\eclipse\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\eclipse\\definitions.eclipse.h",
+            "c:\\users\\admin\\desktop\\eclipse\\eclipse\\source\\eclipse\\variant_combat\\combatcheckpointvolume.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\source\\runtime\\engine\\classes\\components\\boxcomponent.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\source\\runtime\\engine\\classes\\components\\shapecomponent.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\intermediate\\build\\win64\\unrealeditor\\inc\\engine\\uht\\shapecomponent.generated.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\intermediate\\build\\win64\\unrealeditor\\inc\\engine\\uht\\boxcomponent.generated.h",
+            "c:\\users\\admin\\desktop\\eclipse\\eclipse\\intermediate\\build\\win64\\unrealeditor\\inc\\eclipse\\uht\\combatcheckpointvolume.generated.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}
