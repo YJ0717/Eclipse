@@ -85,5 +85,13 @@ protected:
 	// 무기 해제 애니메이션 몽타주
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
 	UAnimMontage* UnequipMontage;
+
+	// Unequip 몽타주가 끝났을 때 호출될 함수
+	UFUNCTION()
+	void OnUnequipMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+private:
+	// Unequip 몽타주가 끝났을 때의 델리게이트 핸들
+	FOnMontageEnded MontageEndedDelegate;
 };
 

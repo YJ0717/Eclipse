@@ -86,26 +86,67 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 void APlayerCharacter::ToggleWeapon()
 {
-	if (bIsWeaponEquipped)
-	{
-		// 무기 해제
-		if (UnequipMontage)
-		{
-			PlayAnimMontage(UnequipMontage);
-			bIsWeaponEquipped = false;
-			AxeComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("AxeSocket"));
-		}
-	}
-	else
-	{
-		// 무기 장착
-		if (EquipMontage)
-		{
-			PlayAnimMontage(EquipMontage);
-			bIsWeaponEquipped = true;
-			AxeComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HandSocket"));
-		}
-	}
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (AnimInstance && (AnimInstance->Montage_IsPlaying(EquipMontage) || AnimInstance->Montage_IsPlaying(UnequipMontage)))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ToggleWeapon: Montage already playing, returning."));
+        return;
+    }
+
+    if (bIsWeaponEquipped)
+    {
+        // 무기 해제
+        if (UnequipMontage)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("ToggleWeapon: UnequipMontage is valid. Attempting to play."));
+            MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnUnequipMontageEnded);
+            AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, UnequipMontage);
+            AnimInstance->Montage_Play(UnequipMontage);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("ToggleWeapon: UnequipMontage is NULL!"));
+        }
+    }
+    else
+    {
+        // 무기 장착
+        if (EquipMontage)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("ToggleWeapon: EquipMontage is valid. Attempting to play."));
+            AnimInstance->Montage_Play(EquipMontage);
+            bIsWeaponEquipped = true;
+            AxeComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HandSocket"));
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("ToggleWeapon: EquipMontage is NULL!"));
+        }
+    }
+}
+
+void APlayerCharacter::OnUnequipMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    UE_LOG(LogTemp, Warning, TEXT("OnUnequipMontageEnded called! bInterrupted: %s"), bInterrupted ? TEXT("True") : TEXT("False"));
+    if (!bInterrupted)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("OnUnequipMontageEnded: Montage finished successfully."));
+        if (AxeComponent && GetMesh())
+        {
+            UE_LOG(LogTemp, Warning, TEXT("OnUnequipMontageEnded: AxeComponent and GetMesh() are valid. Attempting to attach to AxeSocket."));
+            AxeComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("AxeSocket"));
+            bIsWeaponEquipped = false;
+            UE_LOG(LogTemp, Warning, TEXT("OnUnequipMontageEnded: AxeComponent attached to %s"), *AxeComponent->GetAttachSocketName().ToString());
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("OnUnequipMontageEnded: AxeComponent or GetMesh() is NULL! AxeComponent: %s, GetMesh(): %s"), AxeComponent ? TEXT("Valid") : TEXT("NULL"), GetMesh() ? TEXT("Valid") : TEXT("NULL"));
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("OnUnequipMontageEnded: Montage was interrupted."));
+    }
 }
 
 // 이동 입력을 처리하는 함수
