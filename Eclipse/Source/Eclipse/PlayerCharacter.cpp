@@ -81,6 +81,9 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		// 무기 장착/해제
 		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Triggered, this, &APlayerCharacter::ToggleWeapon);
+
+		// 공격
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Attack);
 	}
 }
 
@@ -155,6 +158,22 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 		// 컨트롤러에 Yaw 및 Pitch 입력을 추가합니다.
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
+	}
+}
+
+void APlayerCharacter::Attack(const FInputActionValue& Value)
+{
+	if (bIsWeaponEquipped)
+	{
+		// 공격 몽타주가 있는지 확인하고 재생합니다.
+		if (AttackMontage)
+		{
+			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+			if (AnimInstance && !AnimInstance->Montage_IsPlaying(AttackMontage))
+			{
+				AnimInstance->Montage_Play(AttackMontage);
+			}
+		}
 	}
 }
 

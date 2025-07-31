@@ -33,6 +33,9 @@ protected:
 	// 둘러보기 입력을 위해 호출됩니다.
 	void Look(const FInputActionValue& Value);
 
+	// 공격 입력을 위해 호출됩니다.
+	void Attack(const FInputActionValue& Value);
+
 public:	
 	// 매 프레임 호출됩니다.
 	virtual void Tick(float DeltaTime) override;
@@ -57,6 +60,10 @@ protected:
 	// 무기 장착 입력 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* EquipAction;
+
+	// 공격 입력 액션
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AttackAction;
 
 	// 캐릭터 뒤에 카메라를 배치하는 카메라 붐
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -85,6 +92,10 @@ protected:
 	// 무기 해제 애니메이션 몽타주
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
 	UAnimMontage* UnequipMontage;
+
+	// 공격 애니메이션 몽타주
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
+	UAnimMontage* AttackMontage;
 
 	// 무기 해제 완료 타이머 핸들
 	FTimerHandle UnequipTimerHandle;

@@ -72,6 +72,9 @@ void AEclipseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AEclipseCharacter::Look);
+
+		// Attacking
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &AEclipseCharacter::Attack);
 	}
 	else
 	{
@@ -95,6 +98,12 @@ void AEclipseCharacter::Look(const FInputActionValue& Value)
 
 	// route the input
 	DoLook(LookAxisVector.X, LookAxisVector.Y);
+}
+
+void AEclipseCharacter::Attack(const FInputActionValue& Value)
+{
+	// Implement your attack logic here
+	UE_LOG(LogTemplateCharacter, Log, TEXT("Attack Action Triggered"));
 }
 
 void AEclipseCharacter::DoMove(float Right, float Forward)
