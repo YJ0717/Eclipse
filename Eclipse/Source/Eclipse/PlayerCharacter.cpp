@@ -10,6 +10,9 @@
 #include "EnhancedInputSubsystems.h"
 #include "Components/StaticMeshComponent.h"
 #include "Animation/AnimInstance.h"
+#include "Kismet/GameplayStatics.h"
+#include "DrawDebugHelpers.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 // 기본값 설정
 APlayerCharacter::APlayerCharacter()
@@ -41,7 +44,10 @@ APlayerCharacter::APlayerCharacter()
 	// 도끼 컴포넌트를 생성합니다.
 	AxeComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Axe"));
 	AxeComponent->SetupAttachment(GetMesh(), FName("AxeSocket")); // 초기에는 등 소켓에 부착
-	AxeComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	AxeComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	AxeComponent->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
+	AxeComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
+	AxeComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 
 	bIsWeaponEquipped = false;
 }
@@ -165,14 +171,11 @@ void APlayerCharacter::Attack(const FInputActionValue& Value)
 {
 	if (bIsWeaponEquipped)
 	{
-		// 공격 몽타주가 있는지 확인하고 재생합니다.
-		if (AttackMontage)
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		if (AnimInstance && AttackMontage && !AnimInstance->Montage_IsPlaying(AttackMontage))
 		{
-			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-			if (AnimInstance && !AnimInstance->Montage_IsPlaying(AttackMontage))
-			{
-				AnimInstance->Montage_Play(AttackMontage);
-			}
+			AnimInstance->Montage_Play(AttackMontage);
+			PreviousAxeLocation = AxeComponent->GetComponentLocation();
 		}
 	}
 }
@@ -181,6 +184,47 @@ void APlayerCharacter::Attack(const FInputActionValue& Value)
 void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (bIsWeaponEquipped && AnimInstance && AnimInstance->Montage_IsPlaying(AttackMontage))
+	{
+		FVector CurrentAxeLocation = AxeComponent->GetComponentLocation();
+		FHitResult HitResult;
+		TArray<AActor*> ActorsToIgnore;
+		ActorsToIgnore.Add(this);
+
+		bool bHit = UKismetSystemLibrary::SphereTraceSingle(
+			GetWorld(),
+			PreviousAxeLocation,
+			CurrentAxeLocation,
+			15.0f, // 트레이스 구체의 반지름
+			UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_WorldStatic), // 트레이스 채널
+			false, // 복잡한 트레이스 사용 안 함
+			ActorsToIgnore,
+			EDrawDebugTrace::ForDuration, // 디버그 드로잉
+			HitResult,
+			true
+		);
+
+		
+
+		if (bHit)
+		{
+			// 충돌이 발생했습니다!
+			AnimInstance->Montage_Stop(0.1f, AttackMontage); // 공격 애니메이션을 부드럽게 중지
+
+			// 충돌 지점에 파티클 효과 생성
+			if (ImpactEffect)
+			{
+				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation());
+			}
+
+			// 여기에 충돌 사운드 재생 코드를 추가할 수도 있습니다.
+			// UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, HitResult.ImpactPoint);
+		}
+
+		PreviousAxeLocation = CurrentAxeLocation;
+	}
 }
 
 

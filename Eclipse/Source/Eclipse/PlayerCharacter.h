@@ -97,6 +97,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
 	UAnimMontage* AttackMontage;
 
+	// 벽 충돌 시 생성될 파티클 이펙트
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Effects, meta = (AllowPrivateAccess = "true"))
+	UParticleSystem* ImpactEffect;
+
+	// 이전 프레임의 도끼 위치
+	FVector PreviousAxeLocation;
+
 	// 무기 해제 완료 타이머 핸들
 	FTimerHandle UnequipTimerHandle;
 
