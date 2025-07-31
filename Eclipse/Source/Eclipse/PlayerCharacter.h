@@ -86,12 +86,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
 	UAnimMontage* UnequipMontage;
 
-	// Unequip 몽타주가 끝났을 때 호출될 함수
-	UFUNCTION()
-	void OnUnequipMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	// 무기 해제 완료 타이머 핸들
+	FTimerHandle UnequipTimerHandle;
 
-private:
-	// Unequip 몽타주가 끝났을 때의 델리게이트 핸들
-	FOnMontageEnded MontageEndedDelegate;
+	// 무기 해제 완료 시 호출될 함수
+	void FinishUnequip();
 };
 
