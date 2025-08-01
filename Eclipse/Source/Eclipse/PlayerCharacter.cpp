@@ -90,6 +90,9 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		// 공격
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Attack);
+
+		// 구르기
+		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Dodge);
 	}
 }
 
@@ -181,6 +184,30 @@ void APlayerCharacter::Attack(const FInputActionValue& Value)
 		}
 	}
 }
+
+void APlayerCharacter::Dodge(const FInputActionValue& Value)
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && DodgeMontage && !AnimInstance->IsAnyMontagePlaying())
+	{
+		// 마지막으로 입력된 이동 방향을 가져옵니다.
+		FVector LastInputDirection = GetCharacterMovement()->GetLastInputVector().GetSafeNormal();
+
+		// 만약 이동 입력이 없었다면, 캐릭터의 정면 방향으로 구릅니다.
+		if (LastInputDirection.IsNearlyZero())
+		{
+			LastInputDirection = GetActorForwardVector();
+		}
+
+		// 구르기 애니메이션 재생
+		AnimInstance->Montage_Play(DodgeMontage);
+
+		// 캐릭터를 해당 방향으로 순간적으로 날려 보냅니다.
+		float DodgeDistance = 600.0f;
+		LaunchCharacter(LastInputDirection * DodgeDistance, true, true);
+	}
+}
+
 
 // 매 프레임 호출됩니다.
 void APlayerCharacter::Tick(float DeltaTime)

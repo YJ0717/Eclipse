@@ -36,6 +36,9 @@ protected:
 	// 공격 입력을 위해 호출됩니다.
 	void Attack(const FInputActionValue& Value);
 
+	// 구르기 입력을 위해 호출됩니다.
+	void Dodge(const FInputActionValue& Value);
+
 public:	
 	// 매 프레임 호출됩니다.
 	virtual void Tick(float DeltaTime) override;
@@ -64,6 +67,10 @@ protected:
 	// 공격 입력 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* AttackAction;
+
+	// 구르기 입력 액션
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* DodgeAction;
 
 	// 캐릭터 뒤에 카메라를 배치하는 카메라 붐
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -96,6 +103,10 @@ protected:
 	// 공격 애니메이션 몽타주
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
 	UAnimMontage* AttackMontage;
+
+	// 구르기 애니메이션 몽타주
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
+	UAnimMontage* DodgeMontage;
 
 	// 벽 충돌 시 생성될 파티클 이펙트
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Effects, meta = (AllowPrivateAccess = "true"))
