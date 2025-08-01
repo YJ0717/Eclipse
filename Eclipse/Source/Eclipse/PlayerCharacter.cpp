@@ -175,7 +175,9 @@ void APlayerCharacter::Attack(const FInputActionValue& Value)
 		if (AnimInstance && AttackMontage && !AnimInstance->Montage_IsPlaying(AttackMontage))
 		{
 			AnimInstance->Montage_Play(AttackMontage);
-			PreviousAxeLocation = AxeComponent->GetComponentLocation();
+			// 공격 시작 시, 현재 프레임의 소켓 위치를 "이전 위치"로 저장합니다.
+			PreviousBladeBaseLocation = AxeComponent->GetSocketLocation(TEXT("BladeBaseSocket"));
+			PreviousBladeTipLocation = AxeComponent->GetSocketLocation(TEXT("BladeTipSocket"));
 		}
 	}
 }
@@ -188,43 +190,69 @@ void APlayerCharacter::Tick(float DeltaTime)
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (bIsWeaponEquipped && AnimInstance && AnimInstance->Montage_IsPlaying(AttackMontage))
 	{
-		FVector CurrentAxeLocation = AxeComponent->GetComponentLocation();
-		FHitResult HitResult;
+		// 현재 프레임의 도끼 날 소켓 위치를 가져옵니다.
+		FVector CurrentBladeBaseLocation = AxeComponent->GetSocketLocation(TEXT("BladeBaseSocket"));
+		FVector CurrentBladeTipLocation = AxeComponent->GetSocketLocation(TEXT("BladeTipSocket"));
+
 		TArray<AActor*> ActorsToIgnore;
 		ActorsToIgnore.Add(this);
 
-		bool bHit = UKismetSystemLibrary::SphereTraceSingle(
+		TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+		ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
+		ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn));
+
+		// 각 소켓 위치에 대한 충돌 결과를 저장할 변수
+		FHitResult BaseHitResult, TipHitResult;
+
+		// 1. 손잡이(Base) 부분 충돌 감지 (디버그 라인 표시)
+		bool bBaseHit = UKismetSystemLibrary::SphereTraceSingleForObjects(
 			GetWorld(),
-			PreviousAxeLocation,
-			CurrentAxeLocation,
-			15.0f, // 트레이스 구체의 반지름
-			UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_WorldStatic), // 트레이스 채널
-			false, // 복잡한 트레이스 사용 안 함
+			PreviousBladeBaseLocation,
+			CurrentBladeBaseLocation,
+			10.0f,
+			ObjectTypes,
+			false,
 			ActorsToIgnore,
-			EDrawDebugTrace::ForDuration, // 디버그 드로잉
-			HitResult,
+			EDrawDebugTrace::ForDuration,
+			BaseHitResult,
 			true
 		);
 
-		
+		// 2. 도끼 날(Tip) 부분 충돌 감지 (디버그 라인 없음)
+		bool bTipHit = UKismetSystemLibrary::SphereTraceSingleForObjects(
+			GetWorld(),
+			PreviousBladeTipLocation,
+			CurrentBladeTipLocation,
+			10.0f,
+			ObjectTypes,
+			false,
+			ActorsToIgnore,
+			EDrawDebugTrace::None,
+			TipHitResult,
+			true
+		);
 
-		if (bHit)
+		// 두 충돌 중 하나라도 발생했다면
+		if (bBaseHit || bTipHit)
 		{
-			// 충돌이 발생했습니다!
-			AnimInstance->Montage_Stop(0.1f, AttackMontage); // 공격 애니메이션을 부드럽게 중지
+			// 실제 충돌이 일어난 결과를 사용합니다. (손잡이 부분이 우선)
+			const FHitResult& HitResult = bBaseHit ? BaseHitResult : TipHitResult;
+			AActor* HitActor = HitResult.GetActor();
 
-			// 충돌 지점에 파티클 효과 생성
-			if (ImpactEffect)
+			if (HitActor)
 			{
-				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation());
-			}
+				UGameplayStatics::ApplyDamage(HitActor, 10.f, GetController(), this, UDamageType::StaticClass());
+				AnimInstance->Montage_Stop(0.1f, AttackMontage);
 
-			// 여기에 충돌 사운드 재생 코드를 추가할 수도 있습니다.
-			// UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, HitResult.ImpactPoint);
+				if (ImpactEffect)
+				{
+					UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation());
+				}
+			}
 		}
 
-		PreviousAxeLocation = CurrentAxeLocation;
+		// 현재 프레임의 위치를 다음 프레임을 위해 "이전 위치"로 저장합니다.
+		PreviousBladeBaseLocation = CurrentBladeBaseLocation;
+		PreviousBladeTipLocation = CurrentBladeTipLocation;
 	}
 }
-
-

@@ -101,8 +101,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Effects, meta = (AllowPrivateAccess = "true"))
 	UParticleSystem* ImpactEffect;
 
-	// 이전 프레임의 도끼 위치
-	FVector PreviousAxeLocation;
+	// 이전 프레임의 도끼 날 위치 (소켓 기반)
+	FVector PreviousBladeBaseLocation;
+	FVector PreviousBladeTipLocation;
 
 	// 무기 해제 완료 타이머 핸들
 	FTimerHandle UnequipTimerHandle;
@@ -110,4 +111,3 @@ protected:
 	// 무기 해제 완료 시 호출될 함수
 	void FinishUnequip();
 };
-
