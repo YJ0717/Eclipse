@@ -21,13 +21,20 @@ APlayerCharacter::APlayerCharacter()
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
-	GetCharacterMovement()->bOrientRotationToMovement = true;
+		GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
 
+	// 카메라 붐을 설정합니다. (소울라이크 스타일)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 400.0f;
-	CameraBoom->bUsePawnControlRotation = true;
+	CameraBoom->TargetArmLength = 350.0f;       // 카메라와 캐릭터의 거리
+	CameraBoom->bUsePawnControlRotation = true; // 컨트롤러 회전에 따라 암이 회전하도록 합니다.
+	CameraBoom->bEnableCameraLag = true;        // 카메라 지연 효과를 켭니다.
+	CameraBoom->CameraLagSpeed = 10.0f;         // 지연 속도 (값이 낮을수록 부드러움)
+	CameraBoom->bEnableCameraRotationLag = true;// 카메라 회전 지연 효과를 켭니다.
+	CameraBoom->CameraRotationLagSpeed = 10.0f; // 회전 지연 속도
+	CameraBoom->SocketOffset = FVector(0.f, 60.f, 70.f); // 카메라를 오른쪽 어깨 위로 배치합니다.
+	CameraBoom->bDoCollisionTest = true;        // 카메라가 벽을 통과하지 않도록 충돌 검사를 켭니다.
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
@@ -134,6 +141,12 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 
 void APlayerCharacter::Attack(const FInputActionValue& Value)
 {
+	// 공중에서는 공격할 수 없습니다.
+	if (GetCharacterMovement()->IsFalling())
+	{
+		return;
+	}
+
 	if (bIsWeaponEquipped)
 	{
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
