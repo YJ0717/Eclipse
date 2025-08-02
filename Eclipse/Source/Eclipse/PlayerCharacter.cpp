@@ -21,20 +21,19 @@ APlayerCharacter::APlayerCharacter()
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
-		GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
 
-	// 카메라 붐을 설정합니다. (소울라이크 스타일)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 350.0f;       // 카메라와 캐릭터의 거리
-	CameraBoom->bUsePawnControlRotation = true; // 컨트롤러 회전에 따라 암이 회전하도록 합니다.
-	CameraBoom->bEnableCameraLag = true;        // 카메라 지연 효과를 켭니다.
-	CameraBoom->CameraLagSpeed = 10.0f;         // 지연 속도 (값이 낮을수록 부드러움)
-	CameraBoom->bEnableCameraRotationLag = true;// 카메라 회전 지연 효과를 켭니다.
-	CameraBoom->CameraRotationLagSpeed = 10.0f; // 회전 지연 속도
-	CameraBoom->SocketOffset = FVector(0.f, 60.f, 70.f); // 카메라를 오른쪽 어깨 위로 배치합니다.
-	CameraBoom->bDoCollisionTest = true;        // 카메라가 벽을 통과하지 않도록 충돌 검사를 켭니다.
+	CameraBoom->TargetArmLength = 350.0f;
+	CameraBoom->bUsePawnControlRotation = true;
+	CameraBoom->bEnableCameraLag = true;
+	CameraBoom->CameraLagSpeed = 10.0f;
+	CameraBoom->bEnableCameraRotationLag = true;
+	CameraBoom->CameraRotationLagSpeed = 10.0f;
+	CameraBoom->SocketOffset = FVector(0.f, 60.f, 70.f);
+	CameraBoom->bDoCollisionTest = true;
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
@@ -87,25 +86,25 @@ void APlayerCharacter::ToggleWeapon()
     UAnimMontage* MontageToPlay = bIsWeaponEquipped ? UnequipMontage : EquipMontage;
     if (MontageToPlay)
     {
-        float PlayRate = AnimInstance->Montage_Play(MontageToPlay);
+        const float PlayRate = AnimInstance->Montage_Play(MontageToPlay);
         if (PlayRate > 0.f)
         {
-            GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
+            if (APlayerController* PC = Cast<APlayerController>(GetController()))
+            {
+                DisableInput(PC);
+            }
 
             FOnMontageEnded MontageEndedDelegate;
             MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnMontageEnded);
             AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, MontageToPlay);
 
-            // 몽타주 재생이 끝난 후 상태를 변경합니다.
             if (bIsWeaponEquipped)
             {
-                // Unequip
                 bIsWeaponEquipped = false;
                 AxeComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("AxeSocket"));
             }
             else
             {
-                // Equip
                 bIsWeaponEquipped = true;
                 AxeComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HandSocket"));
             }
@@ -115,7 +114,7 @@ void APlayerCharacter::ToggleWeapon()
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
-	FVector2D MovementVector = Value.Get<FVector2D>();
+	const FVector2D MovementVector = Value.Get<FVector2D>();
 
 	if (Controller != nullptr)
 	{
@@ -130,7 +129,7 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 
 void APlayerCharacter::Look(const FInputActionValue& Value)
 {
-	FVector2D LookAxisVector = Value.Get<FVector2D>();
+	const FVector2D LookAxisVector = Value.Get<FVector2D>();
 
 	if (Controller != nullptr)
 	{
@@ -141,7 +140,6 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 
 void APlayerCharacter::Attack(const FInputActionValue& Value)
 {
-	// 공중에서는 공격할 수 없습니다.
 	if (GetCharacterMovement()->IsFalling())
 	{
 		return;
@@ -152,10 +150,13 @@ void APlayerCharacter::Attack(const FInputActionValue& Value)
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 		if (AnimInstance && AttackMontage && !AnimInstance->IsAnyMontagePlaying())
 		{
-            float PlayRate = AnimInstance->Montage_Play(AttackMontage);
+            const float PlayRate = AnimInstance->Montage_Play(AttackMontage);
             if (PlayRate > 0.f)
             {
-                GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
+                if (APlayerController* PC = Cast<APlayerController>(GetController()))
+                {
+                    DisableInput(PC);
+                }
 
                 FOnMontageEnded MontageEndedDelegate;
                 MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnMontageEnded);
@@ -173,19 +174,31 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && DodgeMontage && !AnimInstance->IsAnyMontagePlaying())
 	{
-        FVector LastInputDirection = GetCharacterMovement()->GetLastInputVector().GetSafeNormal();
-        if (LastInputDirection.IsNearlyZero())
-        {
-            LastInputDirection = GetActorForwardVector();
-        }
+		// 구르기 방향을 결정합니다.
+		FVector LastInputDirection = GetCharacterMovement()->GetLastInputVector().GetSafeNormal();
+		if (LastInputDirection.IsNearlyZero())
+		{
+			LastInputDirection = GetActorForwardVector();
+		}
 
-        FRotator DodgeRotation = LastInputDirection.Rotation();
-        SetActorRotation(DodgeRotation);
+		// 캐릭터를 구르기 방향으로 회전시킵니다.
+		const FRotator DodgeRotation = LastInputDirection.Rotation();
+		SetActorRotation(DodgeRotation);
 
-        float PlayRate = AnimInstance->Montage_Play(DodgeMontage);
+		// 구르기 애니메이션을 재생합니다.
+        const float PlayRate = AnimInstance->Montage_Play(DodgeMontage);
         if (PlayRate > 0.f)
         {
-            GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
+			// 캐릭터에게 물리적인 힘을 가해 앞으로 나아가게 합니다.
+			// 이 값은 구르기 거리와 속도를 결정합니다.
+			const float DodgeStrength = 1200.0f;
+			LaunchCharacter(LastInputDirection * DodgeStrength, false, false);
+
+			// 몽타주가 재생되는 동안 입력을 비활성화합니다.
+            if (APlayerController* PC = Cast<APlayerController>(GetController()))
+            {
+                DisableInput(PC);
+            }
 
             FOnMontageEnded MontageEndedDelegate;
             MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnMontageEnded);
@@ -196,8 +209,10 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 
 void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	// 몽타주가 종료되면(중단 포함), 캐릭터의 움직임 모드를 다시 걷기 상태로 되돌립니다.
-	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		EnableInput(PC);
+	}
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
@@ -219,7 +234,7 @@ void APlayerCharacter::Tick(float DeltaTime)
 
 		FHitResult BaseHitResult, TipHitResult;
 
-		bool bBaseHit = UKismetSystemLibrary::SphereTraceSingleForObjects(
+		const bool bBaseHit = UKismetSystemLibrary::SphereTraceSingleForObjects(
 			GetWorld(),
 			PreviousBladeBaseLocation,
 			CurrentBladeBaseLocation,
@@ -232,7 +247,7 @@ void APlayerCharacter::Tick(float DeltaTime)
 			true
 		);
 
-		bool bTipHit = UKismetSystemLibrary::SphereTraceSingleForObjects(
+		const bool bTipHit = UKismetSystemLibrary::SphereTraceSingleForObjects(
 			GetWorld(),
 			PreviousBladeTipLocation,
 			CurrentBladeTipLocation,
