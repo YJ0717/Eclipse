@@ -31,6 +31,9 @@ protected:
 	void Attack(const FInputActionValue& Value);
 	void Dodge(const FInputActionValue& Value);
 
+	void StartWalking(const FInputActionValue& Value);
+	void StopWalking(const FInputActionValue& Value);
+
 	UFUNCTION()
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
@@ -55,6 +58,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* DodgeAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* WalkAction;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;
@@ -88,4 +94,10 @@ protected:
 
 		FVector PreviousBladeBaseLocation;
 	FVector PreviousBladeTipLocation;
+
+	float OriginalCapsuleHalfHeight;
+	bool bIsDodgeEnding;
+	float DodgeEndTimer;
+
+	float OriginalMaxWalkSpeed;
 };

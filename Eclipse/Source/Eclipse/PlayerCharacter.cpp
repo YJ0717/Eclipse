@@ -53,6 +53,8 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
@@ -75,6 +77,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Triggered, this, &APlayerCharacter::ToggleWeapon);
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Attack);
 		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Dodge);
+		EnhancedInputComponent->BindAction(WalkAction, ETriggerEvent::Started, this, &APlayerCharacter::StartWalking);
+		EnhancedInputComponent->BindAction(WalkAction, ETriggerEvent::Completed, this, &APlayerCharacter::StopWalking);
 	}
 }
 
@@ -169,6 +173,16 @@ void APlayerCharacter::Attack(const FInputActionValue& Value)
 	}
 }
 
+void APlayerCharacter::StartWalking(const FInputActionValue& Value)
+{
+	GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed / 2.0f;
+}
+
+void APlayerCharacter::StopWalking(const FInputActionValue& Value)
+{
+	GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
+}
+
 void APlayerCharacter::Dodge(const FInputActionValue& Value)
 {
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -189,10 +203,9 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
         const float PlayRate = AnimInstance->Montage_Play(DodgeMontage);
         if (PlayRate > 0.f)
         {
-			// 캐릭터에게 물리적인 힘을 가해 앞으로 나아가게 합니다.
-			// 이 값은 구르기 거리와 속도를 결정합니다.
-			const float DodgeStrength = 1200.0f;
-			LaunchCharacter(LastInputDirection * DodgeStrength, false, false);
+			OriginalCapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+			GetCapsuleComponent()->SetCapsuleHalfHeight(OriginalCapsuleHalfHeight / 2.0f);
+			GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -OriginalCapsuleHalfHeight / 2.0f));
 
 			// 몽타주가 재생되는 동안 입력을 비활성화합니다.
             if (APlayerController* PC = Cast<APlayerController>(GetController()))
@@ -209,6 +222,11 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 
 void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	if (Montage == DodgeMontage)
+	{
+		bIsDodgeEnding = true;
+		DodgeEndTimer = 0.0f;
+	}
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
 		EnableInput(PC);
@@ -218,6 +236,25 @@ void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (bIsDodgeEnding)
+	{
+		DodgeEndTimer += DeltaTime;
+		const float DodgeEndDuration = 0.2f;
+
+		const float NewHalfHeight = FMath::Lerp(GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight(), OriginalCapsuleHalfHeight, DodgeEndTimer / DodgeEndDuration);
+		GetCapsuleComponent()->SetCapsuleHalfHeight(NewHalfHeight);
+
+		const FVector NewMeshLocation = FMath::Lerp(GetMesh()->GetRelativeLocation(), FVector(0.f, 0.f, -96.f), DodgeEndTimer / DodgeEndDuration);
+		GetMesh()->SetRelativeLocation(NewMeshLocation);
+
+		if (DodgeEndTimer >= DodgeEndDuration)
+		{
+			bIsDodgeEnding = false;
+			GetCapsuleComponent()->SetCapsuleHalfHeight(OriginalCapsuleHalfHeight);
+			GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -96.f));
+		}
+	}
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (bIsWeaponEquipped && AnimInstance && AnimInstance->Montage_IsPlaying(AttackMontage))
