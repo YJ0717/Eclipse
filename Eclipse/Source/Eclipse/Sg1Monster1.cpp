@@ -65,6 +65,25 @@ void ASg1Monster1::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 }
 
+float ASg1Monster1::TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	const float ActualDamage = Super::TakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
+
+	if (ActualDamage > 0.0f)
+	{
+		Health -= ActualDamage;
+		UE_LOG(LogTemp, Warning, TEXT("Sg1Monster1 took %f damage, current health: %f"), ActualDamage, Health);
+
+		if (Health <= 0.0f)
+		{
+			SetState(EMonsterState::Dead);
+			// TODO: Add death logic (e.g., play death animation, disable collision, drop loot)
+		}
+	}
+
+	return ActualDamage;
+}
+
 void ASg1Monster1::OnSeePawn(APawn* Pawn)
 {
     UE_LOG(LogTemp, Warning, TEXT("OnSeePawn Called! Seen: %s"), *Pawn->GetName());

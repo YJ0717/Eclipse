@@ -13,6 +13,8 @@ class USpringArmComponent;
 class UCameraComponent;
 class UAnimMontage;
 
+class ASg1Monster1;
+
 UCLASS()
 class ECLIPSE_API APlayerCharacter : public ACharacter
 {

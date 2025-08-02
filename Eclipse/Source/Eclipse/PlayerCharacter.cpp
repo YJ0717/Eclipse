@@ -12,6 +12,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Sg1Monster1.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -304,8 +305,16 @@ void APlayerCharacter::Tick(float DeltaTime)
 
 			if (HitActor)
 			{
-				UGameplayStatics::ApplyDamage(HitActor, 10.f, GetController(), this, UDamageType::StaticClass());
-				AnimInstance->Montage_Stop(0.1f, AttackMontage);
+				UGameplayStatics::ApplyDamage(HitActor, 30.f, GetController(), this, UDamageType::StaticClass());
+
+				if (Cast<ASg1Monster1>(HitActor))
+				{
+					// It's a monster, don't stop the montage
+				}
+				else
+				{
+					AnimInstance->Montage_Stop(0.1f, AttackMontage);
+				}
 
 				if (ImpactEffect)
 				{
