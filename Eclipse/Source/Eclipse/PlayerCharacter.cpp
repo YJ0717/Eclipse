@@ -13,6 +13,7 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Sg1Monster1.h"
+#include "Components/BoxComponent.h" // <--- 추가
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -42,10 +43,15 @@ APlayerCharacter::APlayerCharacter()
 
 	AxeComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Axe"));
 	AxeComponent->SetupAttachment(GetMesh(), FName("AxeSocket"));
-	AxeComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	AxeComponent->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
-	AxeComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
-	AxeComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
+	AxeComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); // <--- 충돌 비활성화
+
+	// 무기 충돌 박스 생성 및 설정
+	WeaponCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("WeaponCollisionBox"));
+	WeaponCollisionBox->SetupAttachment(AxeComponent);
+	WeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	WeaponCollisionBox->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
+	WeaponCollisionBox->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	WeaponCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
 
 	bIsWeaponEquipped = false;
 }
@@ -63,6 +69,9 @@ void APlayerCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+
+	// Overlap 이벤트에 함수 바인딩
+	WeaponCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::OnWeaponOverlap);
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -76,7 +85,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Move);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Look);
 		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Triggered, this, &APlayerCharacter::ToggleWeapon);
-		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Attack);
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Attack); // <--- 변경
 		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Dodge);
 		EnhancedInputComponent->BindAction(WalkAction, ETriggerEvent::Started, this, &APlayerCharacter::StartWalking);
 		EnhancedInputComponent->BindAction(WalkAction, ETriggerEvent::Completed, this, &APlayerCharacter::StopWalking);
@@ -143,7 +152,7 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
-void APlayerCharacter::Attack(const FInputActionValue& Value)
+void APlayerCharacter::Attack() // <--- 변경
 {
 	if (GetCharacterMovement()->IsFalling())
 	{
@@ -166,9 +175,6 @@ void APlayerCharacter::Attack(const FInputActionValue& Value)
                 FOnMontageEnded MontageEndedDelegate;
                 MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnMontageEnded);
                 AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, AttackMontage);
-
-                PreviousBladeBaseLocation = AxeComponent->GetSocketLocation(TEXT("BladeBaseSocket"));
-                PreviousBladeTipLocation = AxeComponent->GetSocketLocation(TEXT("BladeTipSocket"));
             }
 		}
 	}
@@ -189,18 +195,15 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && DodgeMontage && !AnimInstance->IsAnyMontagePlaying())
 	{
-		// 구르기 방향을 결정합니다.
 		FVector LastInputDirection = GetCharacterMovement()->GetLastInputVector().GetSafeNormal();
 		if (LastInputDirection.IsNearlyZero())
 		{
 			LastInputDirection = GetActorForwardVector();
 		}
 
-		// 캐릭터를 구르기 방향으로 회전시킵니다.
 		const FRotator DodgeRotation = LastInputDirection.Rotation();
 		SetActorRotation(DodgeRotation);
 
-		// 구르기 애니메이션을 재생합니다.
         const float PlayRate = AnimInstance->Montage_Play(DodgeMontage);
         if (PlayRate > 0.f)
         {
@@ -208,7 +211,6 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 			GetCapsuleComponent()->SetCapsuleHalfHeight(OriginalCapsuleHalfHeight / 2.0f);
 			GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -OriginalCapsuleHalfHeight / 2.0f));
 
-			// 몽타주가 재생되는 동안 입력을 비활성화합니다.
             if (APlayerController* PC = Cast<APlayerController>(GetController()))
             {
                 DisableInput(PC);
@@ -257,73 +259,48 @@ void APlayerCharacter::Tick(float DeltaTime)
 		}
 	}
 
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	if (bIsWeaponEquipped && AnimInstance && AnimInstance->Montage_IsPlaying(AttackMontage))
+	// 기존의 Tick 기반 충돌 검사 로직을 모두 삭제했습니다.
+}
+
+// --- 아래 함수들을 새로 추가 ---
+
+void APlayerCharacter::StartAttackCollision()
+{
+	HitActors.Empty(); // 맞은 액터 목록 초기화
+	WeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly); // 충돌 활성화
+}
+
+void APlayerCharacter::StopAttackCollision()
+{
+	WeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision); // 충돌 비활성화
+}
+
+void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor == this) return; // 자기 자신은 무시
+
+	// 이미 공격한 액터인지 확인
+	if (HitActors.Contains(OtherActor))
 	{
-		FVector CurrentBladeBaseLocation = AxeComponent->GetSocketLocation(TEXT("BladeBaseSocket"));
-		FVector CurrentBladeTipLocation = AxeComponent->GetSocketLocation(TEXT("BladeTipSocket"));
+		return;
+	}
 
-		TArray<AActor*> ActorsToIgnore;
-		ActorsToIgnore.Add(this);
+	// 몬스터인지 확인 (클래스 캐스팅 또는 태그 사용)
+	ASg1Monster1* Monster = Cast<ASg1Monster1>(OtherActor);
+	if (Monster)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Weapon Hit Monster: %s"), *Monster->GetName());
 
-		TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
-		ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
-		ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn));
+		// 데미지 적용
+		UGameplayStatics::ApplyDamage(Monster, AttackDamage, GetController(), this, UDamageType::StaticClass());
 
-		FHitResult BaseHitResult, TipHitResult;
+		// 맞은 액터 목록에 추가
+		HitActors.Add(OtherActor);
 
-		const bool bBaseHit = UKismetSystemLibrary::SphereTraceSingleForObjects(
-			GetWorld(),
-			PreviousBladeBaseLocation,
-			CurrentBladeBaseLocation,
-			10.0f,
-			ObjectTypes,
-			false,
-			ActorsToIgnore,
-			EDrawDebugTrace::ForDuration,
-			BaseHitResult,
-			true
-		);
-
-		const bool bTipHit = UKismetSystemLibrary::SphereTraceSingleForObjects(
-			GetWorld(),
-			PreviousBladeTipLocation,
-			CurrentBladeTipLocation,
-			10.0f,
-			ObjectTypes,
-			false,
-			ActorsToIgnore,
-			EDrawDebugTrace::None,
-			TipHitResult,
-			true
-		);
-
-		if (bBaseHit || bTipHit)
+		// 파티클 효과 생성
+		if (ImpactEffect)
 		{
-			const FHitResult& HitResult = bBaseHit ? BaseHitResult : TipHitResult;
-			AActor* HitActor = HitResult.GetActor();
-
-			if (HitActor)
-			{
-				UGameplayStatics::ApplyDamage(HitActor, 30.f, GetController(), this, UDamageType::StaticClass());
-
-				if (Cast<ASg1Monster1>(HitActor))
-				{
-					// It's a monster, don't stop the montage
-				}
-				else
-				{
-					AnimInstance->Montage_Stop(0.1f, AttackMontage);
-				}
-
-				if (ImpactEffect)
-				{
-					UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation());
-				}
-			}
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
 		}
-
-		PreviousBladeBaseLocation = CurrentBladeBaseLocation;
-		PreviousBladeTipLocation = CurrentBladeTipLocation;
 	}
 }
