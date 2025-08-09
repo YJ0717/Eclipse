@@ -31,7 +31,7 @@ protected:
 
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
-	void Attack(); // <--- 변경
+	void Attack();
 	void Dodge(const FInputActionValue& Value);
 
 	void StartWalking(const FInputActionValue& Value);
@@ -41,6 +41,12 @@ protected:
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 	// AnimNotify에서 호출될 함수들
+	UFUNCTION(BlueprintCallable)
+	void SaveAttack_Notify();
+
+	UFUNCTION(BlueprintCallable)
+	void ResetCombo_Notify();
+
 	UFUNCTION(BlueprintCallable)
 	void StartAttackCollision();
 
@@ -102,7 +108,7 @@ protected:
 	UAnimMontage* UnequipMontage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
-	UAnimMontage* AttackMontage;
+	UAnimMontage* AttackMontage; // 이 변수는 더 이상 직접 사용되지 않지만, 다른 곳에서 쓸 수 있으니 남겨둡니다.
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
 	UAnimMontage* DodgeMontage;
@@ -126,4 +132,22 @@ protected:
 	float DodgeEndTimer;
 
 	float OriginalMaxWalkSpeed;
+
+	// -- 콤보 공격 시스템 --
+	
+	// 여러 공격 몽타주들을 순서대로 담을 배열
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	TArray<UAnimMontage*> AttackMontages;
+
+	// 현재 콤보 카운트
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Attack")
+	int32 ComboCount;
+
+	// 다음 공격이 요청되었는지 여부
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Attack")
+	bool bNextAttackRequested;
+
+	// 현재 공격 중인지 여부 (움직임 제한용)
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Attack")
+	bool bIsAttacking;
 };
