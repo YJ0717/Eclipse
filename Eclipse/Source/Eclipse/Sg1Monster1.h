@@ -74,4 +74,5 @@ private:
 	float LastSeenTime;
 	float ChaseTimeout;
 	FTimerHandle AttackTimerHandle;
+	FTimerHandle StunResetTimerHandle;
 };

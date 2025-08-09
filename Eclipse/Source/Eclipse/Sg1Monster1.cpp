@@ -168,31 +168,49 @@ void ASg1Monster1::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 float ASg1Monster1::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-	if (MonsterState == EMonsterState::EMS_Dead) return DamageAmount;
+
+	if (MonsterState == EMonsterState::EMS_Dead)
+	{
+		return DamageAmount;
+	}
+
 	Health = FMath::Clamp(Health - DamageAmount, 0.f, MaxHealth);
 	if (Health <= 0.f)
 	{
 		Die();
 		return DamageAmount;
 	}
+
+	// 기존에 실행 중이던 '경직 해제' 타이머가 있다면 취소.
+	GetWorldTimerManager().ClearTimer(StunResetTimerHandle);
+	
+	// 공격 중이었다면 공격 타이머도 취소.
+	GetWorldTimerManager().ClearTimer(AttackTimerHandle);
+
+	// 상태를 Stunned로 설정 (이미 Stunned 상태였어도 다시 설정)
 	MonsterState = EMonsterState::EMS_Stunned;
+	
 	if (AIController)
 	{
 		AIController->StopMovement();
 	}
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
-	GetWorldTimerManager().ClearTimer(AttackTimerHandle);
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && HitMontage)
 	{
-		const float MontageLength = AnimInstance->Montage_Play(HitMontage);
-		FTimerHandle TimerHandle;
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &ASg1Monster1::ResetState, MontageLength);
+		// 피격 몽타주를 처음부터 다시 재생 (기존에 재생중이었다면 중단하고 새로 시작)
+		const float MontageLength = AnimInstance->Montage_Play(HitMontage, 1.0f);
+		
+		// 새로운 '경직 해제' 타이머 설정
+		GetWorld()->GetTimerManager().SetTimer(StunResetTimerHandle, this, &ASg1Monster1::ResetState, MontageLength, false);
 	}
 	else
 	{
+		// 몽타주가 없으면 바로 상태 리셋
 		ResetState();
 	}
+
 	return DamageAmount;
 }
 
