@@ -1,18 +1,18 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Perception/PawnSensingComponent.h"
 #include "Sg1Monster1.generated.h"
 
 UENUM(BlueprintType)
 enum class EMonsterState : uint8
 {
-	Patrol,
-	Chase,
-	Attack,
-	Dead
+	EMS_Patrolling UMETA(DisplayName = "Patrolling"),
+	EMS_Chasing UMETA(DisplayName = "Chasing"),
+	EMS_Attacking UMETA(DisplayName = "Attacking"),
+	EMS_Stunned UMETA(DisplayName = "Stunned"),
+	EMS_Dead UMETA(DisplayName = "Dead")
 };
 
 UCLASS()
@@ -21,76 +21,57 @@ class ECLIPSE_API ASg1Monster1 : public ACharacter
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
-		ASg1Monster1();
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	float Health = 100.0f;
-
-	// Called every frame
+	ASg1Monster1();
 	virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
-
-	UPROPERTY(VisibleAnywhere, Category = "AI")
-	class UPawnSensingComponent* PawnSensingComp;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
-	EMonsterState CurrentState = EMonsterState::Patrol;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
-	float AttackRange = 150.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
-	float ChaseSpeed = 600.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
-	float PatrolSpeed = 300.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Patrol")
-	float PatrolRadius = 1000.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Patrol")
-	float PatrolWaitTime = 2.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
-	FVector HomeLocation;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
-	FVector PatrolTargetLocation;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
-	class APlayerCharacter* TargetPawn;
-
-	// 플레이어를 잊어버리는 데 걸리는 시간입니다.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-	float ForgetTime = 3.0f;
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-private:
-	// 플레이어가 마지막으로 목격된 시간입니다.
-	float LastSeenTime = 0.0f;
-	UFUNCTION()
-	void OnSeePawn(APawn* Pawn);
+public:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+	EMonsterState MonsterState;
 
-	UFUNCTION()
-	void OnHearNoise(APawn* PawnInstigator, const FVector& Location, float Volume);
+	UPROPERTY(VisibleAnywhere, Category = "AI")
+	UPawnSensingComponent* PawnSensingComp;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	float MaxHealth;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	float Health;
+
+	UPROPERTY(EditAnywhere, Category = "AI")
+	float PatrolRadius;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	class UAnimMontage* AttackMontage;
 	
-	void SetState(EMonsterState NewState);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	class UAnimMontage* HitMontage;
 
-	void HandlePatrolState(float DeltaTime);
-	void HandleChaseState(float DeltaTime);
-	void HandleAttackState(float DeltaTime);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	class UAnimMontage* DeathMontage;
 
-	void FindNewPatrolLocation();
+private:
+	UFUNCTION()
+	void OnPawnSeen(APawn* SeenPawn);
 
-	FTimerHandle PatrolTimerHandle;
+	UFUNCTION()
+	void OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-	float CurrentPatrolWaitTime;
+	void UpdateAIState();
+	void Patrol();
+	void Chase();
+	void Attack();
+	void Die();
+	void ResetState();
+	void MoveToRandomLocation();
+
+	UPROPERTY()
+	class AAIController* AIController;
+
+	float LastSeenTime;
+	float ChaseTimeout;
+	FTimerHandle AttackTimerHandle;
 };
