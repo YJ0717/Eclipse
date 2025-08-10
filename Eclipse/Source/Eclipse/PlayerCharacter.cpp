@@ -212,10 +212,21 @@ void APlayerCharacter::StopWalking(const FInputActionValue& Value)
 	GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
 }
 
+void APlayerCharacter::ResetDodgeState()
+{
+	bIsRolling = false;
+	GetCapsuleComponent()->SetCapsuleHalfHeight(OriginalCapsuleHalfHeight);
+	GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -OriginalCapsuleHalfHeight));
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		EnableInput(PC);
+	}
+}
+
 void APlayerCharacter::Dodge(const FInputActionValue& Value)
 {
-	// 구르기가 이미 진행 중인 경우, 새로운 구르기를 시작하지 않음
-	if (bIsRolling)
+	if (bIsRolling || GetCharacterMovement()->IsFalling())
 	{
 		return;
 	}
@@ -223,7 +234,10 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && DodgeMontage && !AnimInstance->IsAnyMontagePlaying())
 	{
-		bIsRolling = true; // 구르기 시작
+		bIsRolling = true;
+		
+		OriginalCapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+
 		FVector LastInputDirection = GetCharacterMovement()->GetLastInputVector().GetSafeNormal();
 		if (LastInputDirection.IsNearlyZero())
 		{
@@ -231,20 +245,26 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 		}
 		const FRotator DodgeRotation = LastInputDirection.Rotation();
 		SetActorRotation(DodgeRotation);
-        const float PlayRate = AnimInstance->Montage_Play(DodgeMontage);
-        if (PlayRate > 0.f)
-        {
-			OriginalCapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+
+		const float PlayRate = AnimInstance->Montage_Play(DodgeMontage);
+		if (PlayRate > 0.f)
+		{
 			GetCapsuleComponent()->SetCapsuleHalfHeight(OriginalCapsuleHalfHeight / 2.0f);
 			GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -OriginalCapsuleHalfHeight / 2.0f));
-            if (APlayerController* PC = Cast<APlayerController>(GetController()))
-            {
-                DisableInput(PC);
-            }
-            FOnMontageEnded MontageEndedDelegate;
-            MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnMontageEnded);
-            AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, DodgeMontage);
-        }
+
+			if (APlayerController* PC = Cast<APlayerController>(GetController()))
+			{
+				DisableInput(PC);
+			}
+
+			FOnMontageEnded MontageEndedDelegate;
+			MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, DodgeMontage);
+		}
+		else
+		{
+			bIsRolling = false;
+		}
 	}
 }
 
@@ -252,36 +272,21 @@ void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	if (Montage == DodgeMontage)
 	{
-		bIsDodgeEnding = true;
-		DodgeEndTimer = 0.0f;
+		// 구르기 종료 후 0.1초 뒤에 상태를 리셋합니다.
+		GetWorld()->GetTimerManager().SetTimer(DodgeEndTimerHandle, this, &APlayerCharacter::ResetDodgeState, 0.1f, false);
 	}
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	else
 	{
-		EnableInput(PC);
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			EnableInput(PC);
+		}
 	}
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	if (bIsDodgeEnding)
-	{
-		DodgeEndTimer += DeltaTime;
-		const float DodgeEndDuration = 0.2f;
-		const float NewHalfHeight = FMath::Lerp(GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight(), OriginalCapsuleHalfHeight, DodgeEndTimer / DodgeEndDuration);
-		GetCapsuleComponent()->SetCapsuleHalfHeight(NewHalfHeight);
-		const FVector NewMeshLocation = FMath::Lerp(GetMesh()->GetRelativeLocation(), FVector(0.f, 0.f, -96.f), DodgeEndTimer / DodgeEndDuration);
-		GetMesh()->SetRelativeLocation(NewMeshLocation);
-		if (DodgeEndTimer >= DodgeEndDuration)
-		{
-						bIsDodgeEnding = false;
-			GetCapsuleComponent()->SetCapsuleHalfHeight(OriginalCapsuleHalfHeight);
-			GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -96.f));
-
-			// 구르기 상태를 완전히 종료하고 다음 입력을 받을 수 있도록 함
-			bIsRolling = false;
-		}
-	}
 }
 
 void APlayerCharacter::StartAttackCollision()

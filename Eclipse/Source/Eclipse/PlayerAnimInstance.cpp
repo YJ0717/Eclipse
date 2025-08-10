@@ -1,6 +1,17 @@
 #include "PlayerAnimInstance.h"
 #include "PlayerCharacter.h"
-#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
+void UPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
+{
+    Super::NativeUpdateAnimation(DeltaSeconds);
+
+    APawn* Pawn = TryGetPawnOwner();
+    if (Pawn)
+    {
+        CurrentPawnSpeed = Pawn->GetVelocity().Size();
+    }
+}
 
 void UPlayerAnimInstance::AnimNotify_DetachWeapon()
 {

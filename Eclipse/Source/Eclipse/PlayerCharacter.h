@@ -40,6 +40,8 @@ protected:
 	UFUNCTION()
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+    void ResetDodgeState();
+
 	// AnimNotify에서 호출될 함수들
 	UFUNCTION(BlueprintCallable)
 	void SaveAttack_Notify();
@@ -139,8 +141,7 @@ protected:
 	FVector PreviousBladeTipLocation;
 
 	float OriginalCapsuleHalfHeight;
-	bool bIsDodgeEnding;
-	float DodgeEndTimer;
+	FTimerHandle DodgeEndTimerHandle;
 
 	float OriginalMaxWalkSpeed;
 
