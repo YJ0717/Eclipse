@@ -47,6 +47,12 @@ APlayerCharacter::APlayerCharacter()
 	ComboCount = 0;
 	bNextAttackRequested = false;
 	bIsAttacking = false;
+
+	// 구르기 상태 변수 초기화
+	bIsRolling = false;
+
+	// 기본 달리기 속도를 600으로 설정합니다. (블루프린트에서 덮어쓸 수 있습니다)
+	GetCharacterMovement()->MaxWalkSpeed = 600.f;
 }
 
 void APlayerCharacter::BeginPlay()
@@ -208,9 +214,16 @@ void APlayerCharacter::StopWalking(const FInputActionValue& Value)
 
 void APlayerCharacter::Dodge(const FInputActionValue& Value)
 {
+	// 구르기가 이미 진행 중인 경우, 새로운 구르기를 시작하지 않음
+	if (bIsRolling)
+	{
+		return;
+	}
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && DodgeMontage && !AnimInstance->IsAnyMontagePlaying())
 	{
+		bIsRolling = true; // 구르기 시작
 		FVector LastInputDirection = GetCharacterMovement()->GetLastInputVector().GetSafeNormal();
 		if (LastInputDirection.IsNearlyZero())
 		{
@@ -261,9 +274,12 @@ void APlayerCharacter::Tick(float DeltaTime)
 		GetMesh()->SetRelativeLocation(NewMeshLocation);
 		if (DodgeEndTimer >= DodgeEndDuration)
 		{
-			bIsDodgeEnding = false;
+						bIsDodgeEnding = false;
 			GetCapsuleComponent()->SetCapsuleHalfHeight(OriginalCapsuleHalfHeight);
 			GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -96.f));
+
+			// 구르기 상태를 완전히 종료하고 다음 입력을 받을 수 있도록 함
+			bIsRolling = false;
 		}
 	}
 }

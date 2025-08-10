@@ -82,6 +82,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* WalkAction;
 
+		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Input)
+	float TurnRateGamepad;
+
+private:
+	bool bIsRolling;
+
+protected:
+
+		/** Called for forwards/backward input */
+	void MoveForward(float Value);
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;
 
