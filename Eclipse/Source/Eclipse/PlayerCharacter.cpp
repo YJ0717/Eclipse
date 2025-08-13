@@ -60,6 +60,10 @@ APlayerCharacter::APlayerCharacter()
 	StaminaRegenRate = 15.f; // 초당 회복량
 	bCanRegenStamina = true;
 
+	// HP 변수 초기화
+	MaxHealth = 100.f;
+	CurrentHealth = MaxHealth;
+
 	// 기본 달리기 속도를 600으로 설정합니다. (블루프린트에서 덮어쓸 수 있습니다)
 	GetCharacterMovement()->MaxWalkSpeed = 600.f;
 }
@@ -327,6 +331,33 @@ void APlayerCharacter::Tick(float DeltaTime)
     {
         GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("Current Stamina: %.2f"), CurrentStamina));
     }
+}
+
+float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float DamageTaken = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	if (CurrentHealth <= 0.f) return DamageTaken; // 이미 죽었으면 추가 피해 처리 안함
+
+	CurrentHealth = FMath::Clamp(CurrentHealth - DamageTaken, 0.f, MaxHealth);
+
+	if (CurrentHealth <= 0.f)
+	{
+		Die();
+	}
+
+	// UI 업데이트를 위한 델리게이트가 있다면 여기서 브로드캐스트 (나중에 추가)
+
+	return DamageTaken;
+}
+
+void APlayerCharacter::Die()
+{
+	// 플레이어 사망 처리 로직 (예: 입력 비활성화, 사망 애니메이션 재생, 게임 오버 UI 표시 등)
+	UE_LOG(LogTemp, Warning, TEXT("Player Died!"));
+	GetCharacterMovement()->DisableMovement();
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	// 추가적인 사망 애니메이션, 게임 오버 UI 호출 등을 여기에 구현
 }
 
 void APlayerCharacter::StartAttackCollision()

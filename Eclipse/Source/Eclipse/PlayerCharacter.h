@@ -32,10 +32,24 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
 	float MaxStamina;
 
+	// UI에서 현재 HP를 가져올 수 있도록 BlueprintReadOnly로 설정합니다.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	float CurrentHealth;
+
+	// UI에서 최대 HP를 가져올 수 있도록 BlueprintReadOnly로 설정합니다.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	float MaxHealth;
+
+	// 피해를 입었을 때 호출될 함수 (오버라이드)
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void Tick(float DeltaTime) override;
+
+	// 플레이어 사망 처리 함수
+	void Die();
 
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);

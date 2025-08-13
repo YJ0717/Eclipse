@@ -25,6 +25,10 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
+	// AnimNotify에서 호출될 함수
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void AttackHitNotify();
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -52,6 +56,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 	class UAnimMontage* DeathMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	float MonsterAttackDamage;
 
 private:
 	UFUNCTION()

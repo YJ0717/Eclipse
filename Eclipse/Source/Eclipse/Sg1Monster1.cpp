@@ -7,6 +7,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "PlayerCharacter.h" // 플레이어 캐릭터 클래스를 사용하기 위해 추가
 
 ASg1Monster1::ASg1Monster1()
 {
@@ -19,6 +20,7 @@ ASg1Monster1::ASg1Monster1()
 	PatrolRadius = 1500.f;
 	ChaseTimeout = 5.0f;
 	MonsterState = EMonsterState::EMS_Patrolling;
+	MonsterAttackDamage = 20.f; // 몬스터 공격 데미지 초기화
 }
 
 void ASg1Monster1::BeginPlay()
@@ -115,6 +117,27 @@ void ASg1Monster1::Chase()
 	}
 }
 
+void ASg1Monster1::AttackHitNotify()
+{
+	// 플레이어에게 데미지 적용
+	APawn* PlayerPawn = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+	if (PlayerPawn)
+	{
+		// 몬스터와 플레이어 사이의 거리가 일정 이내일 때만 데미지 적용
+		// 이 범위는 몬스터의 공격 애니메이션과 일치하도록 조정해야 합니다.
+		if (GetDistanceTo(PlayerPawn) <= 250.f) // 공격 범위 설정 (필요에 따라 조정)
+		{
+			// 플레이어 캐릭터로 캐스팅하여 TakeDamage 함수 호출
+			APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(PlayerPawn);
+			if (PlayerCharacter)
+			{
+				UGameplayStatics::ApplyDamage(PlayerCharacter, MonsterAttackDamage, GetController(), this, UDamageType::StaticClass());
+			}
+		}
+	}
+}
+
+// Attack 함수 수정 (기존 데미지 로직 제거)
 void ASg1Monster1::Attack()
 {
 	if (!AIController || MonsterState == EMonsterState::EMS_Dead) return;
@@ -123,6 +146,10 @@ void ASg1Monster1::Attack()
 	if (AnimInstance && AttackMontage)
 	{
 		const float MontageLength = AnimInstance->Montage_Play(AttackMontage);
+
+		// 기존에 여기에 있던 데미지 적용 로직은 AttackHitNotify 함수로 이동했습니다.
+		// 이제 AnimNotify가 발생할 때 데미지가 적용됩니다.
+
 		FTimerDelegate TimerDelegate;
 		TimerDelegate.BindLambda([&]()
 		{
