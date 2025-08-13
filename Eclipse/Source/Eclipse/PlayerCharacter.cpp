@@ -307,7 +307,9 @@ void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 		// 구르기 종료 후 0.1초 뒤에 상태를 리셋합니다.
 		GetWorld()->GetTimerManager().SetTimer(DodgeEndTimerHandle, this, &APlayerCharacter::ResetDodgeState, 0.1f, false);
 	}
-	else
+	// HitMontage는 OnHitAnimationEnded에서 처리되므로 여기서는 일반적인 입력 활성화 로직을 제거합니다.
+	// 다른 몽타주가 끝났을 때만 입력 활성화
+	else if (Montage != HitMontage && Montage != DeathMontage) // DeathMontage도 추가
 	{
 		if (APlayerController* PC = Cast<APlayerController>(GetController()))
 		{
@@ -341,9 +343,28 @@ float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damag
 
 	CurrentHealth = FMath::Clamp(CurrentHealth - DamageTaken, 0.f, MaxHealth);
 
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
 	if (CurrentHealth <= 0.f)
 	{
 		Die();
+	}
+	else // 아직 살아있다면 피격 애니메이션 재생
+	{
+		if (AnimInstance && HitMontage)
+		{
+			const float PlayRate = AnimInstance->Montage_Play(HitMontage);
+			if (PlayRate > 0.f)
+			{
+				if (APlayerController* PC = Cast<APlayerController>(GetController()))
+				{
+					DisableInput(PC); // 피격 중 입력 비활성화
+				}
+				FOnMontageEnded MontageEndedDelegate;
+				MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnHitAnimationEnded);
+				AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, HitMontage);
+			}
+		}
 	}
 
 	// UI 업데이트를 위한 델리게이트가 있다면 여기서 브로드캐스트 (나중에 추가)
@@ -353,11 +374,51 @@ float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damag
 
 void APlayerCharacter::Die()
 {
-	// 플레이어 사망 처리 로직 (예: 입력 비활성화, 사망 애니메이션 재생, 게임 오버 UI 표시 등)
+	// 플레이어 사망 처리 로직
 	UE_LOG(LogTemp, Warning, TEXT("Player Died!"));
+
+	// 입력 영구 비활성화
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		DisableInput(PC);
+	}
+
 	GetCharacterMovement()->DisableMovement();
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	// 추가적인 사망 애니메이션, 게임 오버 UI 호출 등을 여기에 구현
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && DeathMontage)
+	{
+		AnimInstance->Montage_Play(DeathMontage);
+		FOnMontageEnded MontageEndedDelegate;
+		MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnDeathAnimationEnded);
+		AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, DeathMontage);
+	}
+	else
+	{
+		// 사망 애니메이션이 없으면 바로 액터 숨김/파괴
+		SetActorHiddenInGame(true);
+		SetActorEnableCollision(false);
+		SetLifeSpan(0.1f); // 짧은 수명 설정
+	}
+}
+
+void APlayerCharacter::OnDeathAnimationEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	// 사망 애니메이션 종료 후 처리 (예: 액터 숨김, 게임 오버 UI 호출 등)
+	SetActorHiddenInGame(true);
+	SetActorEnableCollision(false);
+	SetLifeSpan(0.1f); // 짧은 수명 설정
+	// 게임 오버 UI 호출 등을 여기에 구현
+}
+
+void APlayerCharacter::OnHitAnimationEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	// 피격 애니메이션 종료 후 입력 재활성화
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		EnableInput(PC);
+	}
 }
 
 void APlayerCharacter::StartAttackCollision()

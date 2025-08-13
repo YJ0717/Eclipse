@@ -62,6 +62,12 @@ protected:
 	UFUNCTION()
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+	UFUNCTION()
+	void OnDeathAnimationEnded(UAnimMontage* Montage, bool bInterrupted); // 사망 애니메이션 종료 시 호출
+
+	UFUNCTION()
+	void OnHitAnimationEnded(UAnimMontage* Montage, bool bInterrupted); // 피격 애니메이션 종료 시 호출
+
     void ResetDodgeState();
 
 	// AnimNotify에서 호출될 함수들
@@ -158,6 +164,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
 	UAnimMontage* DodgeMontage;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
+	UAnimMontage* HitMontage; // 피격 애니메이션 몽타주
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
+	UAnimMontage* DeathMontage; // 사망 애니메이션 몽타주
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Effects, meta = (AllowPrivateAccess = "true"))
 	UParticleSystem* ImpactEffect;
 
@@ -174,6 +186,7 @@ protected:
 
 	float OriginalCapsuleHalfHeight;
 	FTimerHandle DodgeEndTimerHandle;
+	FTimerHandle DeathTimerHandle; // 사망 애니메이션 타이머 핸들
 
 	float OriginalMaxWalkSpeed;
 
