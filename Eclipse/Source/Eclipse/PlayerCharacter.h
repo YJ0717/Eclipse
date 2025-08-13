@@ -24,6 +24,14 @@ class ECLIPSE_API APlayerCharacter : public ACharacter
 public:
 	APlayerCharacter();
 
+	// UI에서 현재 스태미너를 가져올 수 있도록 BlueprintReadOnly로 설정합니다.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	float CurrentStamina;
+
+	// UI에서 최대 스태미너를 가져올 수 있도록 BlueprintReadOnly로 설정합니다.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	float MaxStamina;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -91,6 +99,16 @@ private:
 	bool bIsRolling;
 
 protected:
+	// 스태미너 관련 변수들
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	float DodgeStaminaCost;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	float StaminaRegenRate;
+
+	bool bCanRegenStamina;
+
+	// ... 나머지 코드 ...
 
 		/** Called for forwards/backward input */
 	void MoveForward(float Value);

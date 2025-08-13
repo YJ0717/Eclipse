@@ -13,6 +13,8 @@
 #include "Sg1Monster1.h"
 #include "Components/BoxComponent.h"
 
+#include "Engine/Engine.h"
+
 APlayerCharacter::APlayerCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -51,6 +53,13 @@ APlayerCharacter::APlayerCharacter()
 	// 구르기 상태 변수 초기화
 	bIsRolling = false;
 
+	// 스태미너 변수 초기화
+	MaxStamina = 100.f;
+	CurrentStamina = MaxStamina;
+	DodgeStaminaCost = 25.f;
+	StaminaRegenRate = 15.f; // 초당 회복량
+	bCanRegenStamina = true;
+
 	// 기본 달리기 속도를 600으로 설정합니다. (블루프린트에서 덮어쓸 수 있습니다)
 	GetCharacterMovement()->MaxWalkSpeed = 600.f;
 }
@@ -66,7 +75,13 @@ void APlayerCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
-	WeaponCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::OnWeaponOverlap);
+	    WeaponCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::OnWeaponOverlap);
+
+    // 화면에 초기 스태미너 값 출력
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Initial Stamina: %.2f / %.2f"), CurrentStamina, MaxStamina));
+    }
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -222,10 +237,19 @@ void APlayerCharacter::ResetDodgeState()
 	{
 		EnableInput(PC);
 	}
+
+	// 구르기가 끝나면 스태미너 회복 시작
+	bCanRegenStamina = true;
 }
 
 void APlayerCharacter::Dodge(const FInputActionValue& Value)
 {
+	// 스태미너가 부족하면 구르기 불가
+	if (CurrentStamina < DodgeStaminaCost)
+	{
+		return;
+	}
+
 	if (bIsRolling || GetCharacterMovement()->IsFalling())
 	{
 		return;
@@ -234,6 +258,10 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && DodgeMontage && !AnimInstance->IsAnyMontagePlaying())
 	{
+		// 스태미너 소모 및 회복 중지
+		CurrentStamina -= DodgeStaminaCost;
+		bCanRegenStamina = false;
+
 		bIsRolling = true;
 		
 		OriginalCapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
@@ -287,6 +315,18 @@ void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// 스태미너 회복 로직
+	if (bCanRegenStamina && CurrentStamina < MaxStamina)
+	{
+		CurrentStamina = FMath::Min(MaxStamina, CurrentStamina + StaminaRegenRate * DeltaTime);
+	}
+
+    // 화면에 현재 스태미너 값 출력
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("Current Stamina: %.2f"), CurrentStamina));
+    }
 }
 
 void APlayerCharacter::StartAttackCollision()
