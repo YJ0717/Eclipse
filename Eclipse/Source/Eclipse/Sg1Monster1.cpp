@@ -6,6 +6,7 @@
 #include "NavigationSystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/BoxComponent.h" // UBoxComponent를 사용하기 위해 추가
 #include "Navigation/PathFollowingComponent.h"
 #include "PlayerCharacter.h" // 플레이어 캐릭터 클래스를 사용하기 위해 추가
 
@@ -21,6 +22,14 @@ ASg1Monster1::ASg1Monster1()
 	ChaseTimeout = 5.0f;
 	MonsterState = EMonsterState::EMS_Patrolling;
 	MonsterAttackDamage = 20.f; // 몬스터 공격 데미지 초기화
+
+	// 오른손 콜리전 박스 설정
+	RightHandCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("RightHandCollisionBox"));
+	RightHandCollisionBox->SetupAttachment(GetMesh(), FName("hand_rSocket")); // 몬스터 스켈레톤의 오른손 소켓 이름으로 변경 필요
+	RightHandCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision); // 기본적으로 비활성화
+	RightHandCollisionBox->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
+	RightHandCollisionBox->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	RightHandCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap); // 플레이어와만 오버랩
 }
 
 void ASg1Monster1::BeginPlay()
@@ -31,6 +40,11 @@ void ASg1Monster1::BeginPlay()
 	if (PawnSensingComp)
 	{
 		PawnSensingComp->OnSeePawn.AddDynamic(this, &ASg1Monster1::OnPawnSeen);
+	}
+	// 콜리전 박스 오버랩 이벤트 바인딩
+	if (RightHandCollisionBox)
+	{
+		RightHandCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ASg1Monster1::OnAttackOverlapBegin);
 	}
 	MoveToRandomLocation();
 }
@@ -67,6 +81,24 @@ void ASg1Monster1::OnPawnSeen(APawn* SeenPawn)
 		{
 			MonsterState = EMonsterState::EMS_Chasing;
 			GetWorldTimerManager().ClearTimer(AttackTimerHandle);
+		}
+	}
+}
+
+void ASg1Monster1::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	// 몬스터 자신과 충돌하지 않도록
+	if (OtherActor == this) return;
+
+	// 플레이어 캐릭터와 충돌했는지 확인
+	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(OtherActor);
+	if (PlayerCharacter)
+	{
+		// 이미 피해를 준 액터인지 확인 (한 번의 공격에 여러 번 피해를 주지 않도록)
+		if (!HitActors.Contains(OtherActor))
+		{
+			UGameplayStatics::ApplyDamage(PlayerCharacter, MonsterAttackDamage, GetController(), this, UDamageType::StaticClass());
+			HitActors.Add(OtherActor); // 피해를 준 액터 목록에 추가
 		}
 	}
 }
@@ -119,21 +151,20 @@ void ASg1Monster1::Chase()
 
 void ASg1Monster1::AttackHitNotify()
 {
-	// 플레이어에게 데미지 적용
-	APawn* PlayerPawn = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
-	if (PlayerPawn)
+	// 공격 콜리전 활성화
+	if (RightHandCollisionBox)
 	{
-		// 몬스터와 플레이어 사이의 거리가 일정 이내일 때만 데미지 적용
-		// 이 범위는 몬스터의 공격 애니메이션과 일치하도록 조정해야 합니다.
-		if (GetDistanceTo(PlayerPawn) <= 250.f) // 공격 범위 설정 (필요에 따라 조정)
-		{
-			// 플레이어 캐릭터로 캐스팅하여 TakeDamage 함수 호출
-			APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(PlayerPawn);
-			if (PlayerCharacter)
-			{
-				UGameplayStatics::ApplyDamage(PlayerCharacter, MonsterAttackDamage, GetController(), this, UDamageType::StaticClass());
-			}
-		}
+		RightHandCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		HitActors.Empty(); // 새로운 공격 시작 시 HitActors 초기화
+	}
+}
+
+void ASg1Monster1::AttackEndNotify()
+{
+	// 공격 콜리전 비활성화
+	if (RightHandCollisionBox)
+	{
+		RightHandCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 }
 
