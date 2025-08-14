@@ -3,6 +3,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/PlayerController.h" // APlayerController 사용을 위해 추가
+#include "GameFramework/Controller.h" // AController 사용을 위해 추가
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Components/StaticMeshComponent.h"
