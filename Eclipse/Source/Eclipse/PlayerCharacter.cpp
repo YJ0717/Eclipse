@@ -3,8 +3,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
-#include "GameFramework/PlayerController.h" // APlayerController 사용을 위해 추가
-#include "GameFramework/Controller.h" // AController 사용을 위해 추가
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/Controller.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Components/StaticMeshComponent.h"
@@ -14,9 +14,8 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Sg1Monster1.h"
 #include "Components/BoxComponent.h"
-
 #include "Engine/Engine.h"
-
+#include "RiposteDamageType.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -358,6 +357,8 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 
 void APlayerCharacter::Parry()
 {
+	if (!bIsWeaponEquipped) return; // 무기를 들었을 때만 패링 가능
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && ParryMontage && !AnimInstance->IsAnyMontagePlaying())
 	{
@@ -369,7 +370,7 @@ void APlayerCharacter::ApplyRiposteDamage()
 {
 	if (RiposteTarget)
 	{
-		UGameplayStatics::ApplyDamage(RiposteTarget, RiposteDamage, GetController(), this, UDamageType::StaticClass());
+		UGameplayStatics::ApplyDamage(RiposteTarget, RiposteDamage, GetController(), this, URiposteDamageType::StaticClass());
 		RiposteTarget = nullptr; // 타겟 초기화
 	}
 }

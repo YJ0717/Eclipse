@@ -6,9 +6,11 @@
 #include "NavigationSystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
-#include "Components/BoxComponent.h" // UBoxComponent를 사용하기 위해 추가
+#include "Components/BoxComponent.h"
 #include "Navigation/PathFollowingComponent.h"
-#include "PlayerCharacter.h" // 플레이어 캐릭터 클래스를 사용하기 위해 추가
+#include "PlayerCharacter.h"
+#include "RiposteDamageType.h"
+#include "Engine/DamageEvents.h"
 
 ASg1Monster1::ASg1Monster1()
 {
@@ -227,9 +229,26 @@ float ASg1Monster1::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	if (MonsterState == EMonsterState::EMS_Dead || MonsterState == EMonsterState::EMS_Parried)
+	if (MonsterState == EMonsterState::EMS_Dead) return DamageAmount;
+
+	// 패링된 상태에서는 리포스트 데미지만 허용
+	if (MonsterState == EMonsterState::EMS_Parried)
 	{
-		return DamageAmount;
+		if (DamageEvent.DamageTypeClass && DamageEvent.DamageTypeClass->IsChildOf(URiposteDamageType::StaticClass()))
+		{
+			// 리포스트 데미지는 체력을 감소시킴
+			Health = FMath::Clamp(Health - DamageAmount, 0.f, MaxHealth);
+			if (Health <= 0.f)
+			{
+				Die();
+			}
+			return DamageAmount;
+		}
+		else
+		{
+			// 다른 모든 데미지는 무시
+			return 0.f;
+		}
 	}
 
 	Health = FMath::Clamp(Health - DamageAmount, 0.f, MaxHealth);
