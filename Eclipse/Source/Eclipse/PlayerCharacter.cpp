@@ -353,6 +353,18 @@ float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damag
 	}
 	else // 아직 살아있다면 피격 애니메이션 재생
 	{
+		// 피격 시 공격 및 구르기 상태를 초기화하여 굳는 버그를 방지합니다.
+		bIsAttacking = false;
+		bIsRolling = false;
+		ComboCount = 0;
+		bNextAttackRequested = false;
+
+		// 현재 재생 중인 모든 몽타주를 중지시킵니다.
+		if (AnimInstance)
+		{
+			AnimInstance->StopAllMontages(0.2f);
+		}
+
 		if (AnimInstance && HitMontage)
 		{
 			const float PlayRate = AnimInstance->Montage_Play(HitMontage);
