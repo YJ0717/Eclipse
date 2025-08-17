@@ -55,6 +55,7 @@ protected:
 	void Look(const FInputActionValue& Value);
 	void Attack();
 	void Dodge(const FInputActionValue& Value);
+	void Parry(); // 패링 함수
 
 	void StartWalking(const FInputActionValue& Value);
 	void StopWalking(const FInputActionValue& Value);
@@ -82,6 +83,10 @@ protected:
 
 	UFUNCTION(BlueprintCallable)
 	void StopAttackCollision();
+
+	UFUNCTION(BlueprintCallable)
+	void ApplyRiposteDamage();
+
 
 	// 충돌 이벤트 함수
 	UFUNCTION()
@@ -112,11 +117,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* WalkAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ParryAction;
+
 		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Input)
 	float TurnRateGamepad;
 
 private:
 	bool bIsRolling;
+	bool IsParryWindowActive() const;
 
 protected:
 	// 스태미너 관련 변수들
@@ -170,6 +179,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
 	UAnimMontage* DeathMontage; // 사망 애니메이션 몽타주
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
+	UAnimMontage* ParryMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
+	UAnimMontage* RiposteMontage;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Effects, meta = (AllowPrivateAccess = "true"))
 	UParticleSystem* ImpactEffect;
 
@@ -180,6 +195,9 @@ protected:
 	// 공격 데미지 <--- 추가
 	UPROPERTY(EditAnywhere, Category = "Weapon")
 	float AttackDamage = 25.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon")
+	float RiposteDamage = 150.0f;
 
 	FVector PreviousBladeBaseLocation;
 	FVector PreviousBladeTipLocation;
@@ -207,4 +225,14 @@ protected:
 	// 현재 공격 중인지 여부 (움직임 제한용)
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Attack")
 	bool bIsAttacking;
+
+	// -- 패링 시스템 --
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parry")
+	float ParryStartTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parry")
+	float ParryEndTime;
+
+	UPROPERTY()
+	ASg1Monster1* RiposteTarget;
 };

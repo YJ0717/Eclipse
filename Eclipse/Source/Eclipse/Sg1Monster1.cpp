@@ -57,7 +57,7 @@ void ASg1Monster1::Tick(float DeltaTime)
 
 void ASg1Monster1::UpdateAIState()
 {
-	if (MonsterState == EMonsterState::EMS_Stunned || MonsterState == EMonsterState::EMS_Dead || MonsterState == EMonsterState::EMS_Attacking)
+	if (MonsterState == EMonsterState::EMS_Stunned || MonsterState == EMonsterState::EMS_Dead || MonsterState == EMonsterState::EMS_Attacking || MonsterState == EMonsterState::EMS_Parried)
 	{
 		return;
 	}
@@ -184,13 +184,13 @@ void ASg1Monster1::Attack()
 		FTimerDelegate TimerDelegate;
 		TimerDelegate.BindLambda([&]()
 		{
-			if(MonsterState != EMonsterState::EMS_Dead) MonsterState = EMonsterState::EMS_Chasing;
+			if(MonsterState != EMonsterState::EMS_Dead && MonsterState != EMonsterState::EMS_Parried) MonsterState = EMonsterState::EMS_Chasing;
 		});
 		GetWorldTimerManager().SetTimer(AttackTimerHandle, TimerDelegate, MontageLength, false);
 	}
 	else
 	{
-		if(MonsterState != EMonsterState::EMS_Dead) MonsterState = EMonsterState::EMS_Chasing;
+		if(MonsterState != EMonsterState::EMS_Dead && MonsterState != EMonsterState::EMS_Parried) MonsterState = EMonsterState::EMS_Chasing;
 	}
 }
 
@@ -227,7 +227,7 @@ float ASg1Monster1::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	if (MonsterState == EMonsterState::EMS_Dead)
+	if (MonsterState == EMonsterState::EMS_Dead || MonsterState == EMonsterState::EMS_Parried)
 	{
 		return DamageAmount;
 	}
@@ -284,4 +284,39 @@ void ASg1Monster1::ResetState()
 	{
 		MonsterState = EMonsterState::EMS_Patrolling;
 	}
+}
+
+
+void ASg1Monster1::GetParried()
+{
+	if (MonsterState == EMonsterState::EMS_Dead) return;
+
+	MonsterState = EMonsterState::EMS_Parried;
+
+	if (AIController)
+	{
+		AIController->StopMovement();
+	}
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance)
+	{
+		AnimInstance->StopAllMontages(0.2f);
+		if (StaggerMontage)
+		{
+			AnimInstance->Montage_Play(StaggerMontage);
+		}
+	}
+
+	GetWorldTimerManager().SetTimer(StaggerTimerHandle, this, &ASg1Monster1::RecoverFromStagger, 3.0f, false);
+}
+
+void ASg1Monster1::RecoverFromStagger()
+{
+	ResetState();
+}
+
+bool ASg1Monster1::IsStaggered() const
+{
+	return MonsterState == EMonsterState::EMS_Parried;
 }

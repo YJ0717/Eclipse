@@ -12,6 +12,7 @@ enum class EMonsterState : uint8
 	EMS_Chasing UMETA(DisplayName = "Chasing"),
 	EMS_Attacking UMETA(DisplayName = "Attacking"),
 	EMS_Stunned UMETA(DisplayName = "Stunned"),
+	EMS_Parried UMETA(DisplayName = "Parried"),
 	EMS_Dead UMETA(DisplayName = "Dead")
 };
 
@@ -28,6 +29,11 @@ public:
 	// AnimNotify에서 호출될 함수
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void AttackHitNotify();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	bool IsStaggered() const;
+
+	void GetParried();
 
 protected:
 	virtual void BeginPlay() override;
@@ -56,6 +62,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 	class UAnimMontage* DeathMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	class UAnimMontage* StaggerMontage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	float MonsterAttackDamage;
@@ -86,6 +95,7 @@ private:
 	void Die();
 	void ResetState();
 	void MoveToRandomLocation();
+	void RecoverFromStagger();
 
 	UPROPERTY()
 	class AAIController* AIController;
@@ -94,4 +104,5 @@ private:
 	float ChaseTimeout;
 	FTimerHandle AttackTimerHandle;
 	FTimerHandle StunResetTimerHandle;
+	FTimerHandle StaggerTimerHandle;
 };

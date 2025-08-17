@@ -17,6 +17,7 @@
 
 #include "Engine/Engine.h"
 
+
 APlayerCharacter::APlayerCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -54,6 +55,11 @@ APlayerCharacter::APlayerCharacter()
 
 	// 구르기 상태 변수 초기화
 	bIsRolling = false;
+
+	// 패링 상태 변수 초기화
+	RiposteTarget = nullptr;
+	ParryStartTime = 0.1f;
+	ParryEndTime = 0.4f;
 
 	// 스태미너 변수 초기화
 	MaxStamina = 100.f;
@@ -104,6 +110,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Dodge);
 		EnhancedInputComponent->BindAction(WalkAction, ETriggerEvent::Started, this, &APlayerCharacter::StartWalking);
 		EnhancedInputComponent->BindAction(WalkAction, ETriggerEvent::Completed, this, &APlayerCharacter::StopWalking);
+		EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Parry);
 	}
 }
 
@@ -140,7 +147,10 @@ void APlayerCharacter::ToggleWeapon()
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
-	if (bIsAttacking)
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	bool bIsParrying = AnimInstance && AnimInstance->Montage_IsPlaying(ParryMontage);
+
+	if (bIsAttacking || bIsParrying)
 	{
 		return;
 	}
@@ -172,6 +182,48 @@ void APlayerCharacter::Attack()
 	{
 		return;
 	}
+
+	// 리포스트(특수 공격) 확인
+	FHitResult HitResult;
+	FVector Start = GetActorLocation();
+	FVector End = Start + GetActorForwardVector() * 200.f; // 전방 200cm 확인
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(this);
+
+	bool bHit = UKismetSystemLibrary::SphereTraceSingle(
+		this,
+		Start,
+		End,
+		100.f, // 1m 반경
+		UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_Pawn),
+		false,
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration,
+		HitResult,
+		true
+	);
+
+	if (bHit)
+	{
+		ASg1Monster1* Monster = Cast<ASg1Monster1>(HitResult.GetActor());
+		if (Monster && Monster->IsStaggered())
+		{
+			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+			if (AnimInstance && RiposteMontage && !AnimInstance->IsAnyMontagePlaying())
+			{
+				RiposteTarget = Monster;
+				// 몬스터를 플레이어 앞으로 이동시키고 방향을 맞춤
+				FVector TargetLocation = GetActorLocation() + GetActorForwardVector() * 120.f;
+				FRotator TargetRotation = (GetActorLocation() - Monster->GetActorLocation()).Rotation();
+				Monster->SetActorLocationAndRotation(TargetLocation, TargetRotation);
+				
+				AnimInstance->Montage_Play(RiposteMontage);
+				return; // 리포스트 실행 시 일반 공격 로직은 실행하지 않음
+			}
+		}
+	}
+
+
 	if (bIsWeaponEquipped)
 	{
 		if (ComboCount == 0)
@@ -256,12 +308,14 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 		return;
 	}
 
-	if (bIsRolling || GetCharacterMovement()->IsFalling())
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	bool bIsParrying = AnimInstance && AnimInstance->Montage_IsPlaying(ParryMontage);
+
+	if (bIsRolling || GetCharacterMovement()->IsFalling() || bIsAttacking || bIsParrying)
 	{
 		return;
 	}
 
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && DodgeMontage && !AnimInstance->IsAnyMontagePlaying())
 	{
 		// 스태미너 소모 및 회복 중지
@@ -302,6 +356,25 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 	}
 }
 
+void APlayerCharacter::Parry()
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && ParryMontage && !AnimInstance->IsAnyMontagePlaying())
+	{
+		AnimInstance->Montage_Play(ParryMontage);
+	}
+}
+
+void APlayerCharacter::ApplyRiposteDamage()
+{
+	if (RiposteTarget)
+	{
+		UGameplayStatics::ApplyDamage(RiposteTarget, RiposteDamage, GetController(), this, UDamageType::StaticClass());
+		RiposteTarget = nullptr; // 타겟 초기화
+	}
+}
+
+
 void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	if (Montage == DodgeMontage)
@@ -311,7 +384,7 @@ void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 	}
 	// HitMontage는 OnHitAnimationEnded에서 처리되므로 여기서는 일반적인 입력 활성화 로직을 제거합니다.
 	// 다른 몽타주가 끝났을 때만 입력 활성화
-	else if (Montage != HitMontage && Montage != DeathMontage) // DeathMontage도 추가
+	else if (Montage != HitMontage && Montage != DeathMontage && Montage != ParryMontage) // ParryMontage도 추가
 	{
 		if (APlayerController* PC = Cast<APlayerController>(GetController()))
 		{
@@ -335,10 +408,32 @@ void APlayerCharacter::Tick(float DeltaTime)
     {
         GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("Current Stamina: %.2f"), CurrentStamina));
     }
+
+	// 패링 가능 상태일 때 디버그 스피어 표시
+	if (IsParryWindowActive())
+	{
+		FVector Center = GetActorLocation() + GetActorForwardVector() * 75.f; // 75cm 앞으로
+		float Radius = 75.f;
+		DrawDebugSphere(GetWorld(), Center, Radius, 12, FColor::Cyan, false, 0.f, 0, 1.f);
+	}
 }
 
 float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	// 패링 성공 로직
+	if (IsParryWindowActive() && DamageCauser)
+	{
+		ASg1Monster1* Monster = Cast<ASg1Monster1>(DamageCauser);
+		if (Monster)
+		{
+			Monster->GetParried();
+			// 패링 성공 효과음 또는 파티클 재생 (선택 사항)
+			// UGameplayStatics::PlaySoundAtLocation(this, ParrySuccessSound, GetActorLocation());
+			return 0.f; // 데미지 무효화
+		}
+	}
+
+
 	float DamageTaken = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	if (CurrentHealth <= 0.f) return DamageTaken; // 이미 죽었으면 추가 피해 처리 안함
@@ -464,4 +559,20 @@ void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent,
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
 		}
 	}
+}
+
+bool APlayerCharacter::IsParryWindowActive() const
+{
+    if (!GetMesh() || !ParryMontage)
+    {
+        return false;
+    }
+
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (AnimInstance && AnimInstance->Montage_IsPlaying(ParryMontage))
+    {
+        const float CurrentPosition = AnimInstance->Montage_GetPosition(ParryMontage);
+        return CurrentPosition >= ParryStartTime && CurrentPosition <= ParryEndTime;
+    }
+    return false;
 }
