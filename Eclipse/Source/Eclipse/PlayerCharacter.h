@@ -4,7 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "InputActionValue.h" 
+#include "InputActionValue.h"
+#include "Components/TimelineComponent.h"
 #include "PlayerCharacter.generated.h"
 
 class UInputMappingContext;
@@ -12,7 +13,9 @@ class UInputAction;
 class USpringArmComponent;
 class UCameraComponent;
 class UAnimMontage;
-class UBoxComponent; // <--- 추가
+class UBoxComponent;
+class UCurveFloat;
+class UTimelineComponent;
 
 class ASg1Monster1;
 
@@ -235,4 +238,15 @@ protected:
 
 	UPROPERTY()
 	ASg1Monster1* RiposteTarget;
+
+private:
+	// -- 패링 카메라 줌 --
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	UTimelineComponent* ParryCameraTimelineComp;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	UCurveFloat* ParryCameraCurve;
+
+	UFUNCTION()
+	void UpdateParryCamera(float Value);
 };

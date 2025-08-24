@@ -73,11 +73,21 @@ APlayerCharacter::APlayerCharacter()
 
 	// 기본 달리기 속도를 600으로 설정합니다. (블루프린트에서 덮어쓸 수 있습니다)
 	GetCharacterMovement()->MaxWalkSpeed = 600.f;
+
+	ParryCameraTimelineComp = CreateDefaultSubobject<UTimelineComponent>(TEXT("ParryCameraTimeline"));
 }
 
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (ParryCameraCurve)
+	{
+		FOnTimelineFloat ProgressFunction;
+		ProgressFunction.BindUFunction(this, FName("UpdateParryCamera"));
+		ParryCameraTimelineComp->AddInterpFloat(ParryCameraCurve, ProgressFunction);
+	}
+
 	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
 	{
@@ -363,6 +373,15 @@ void APlayerCharacter::Parry()
 	if (AnimInstance && ParryMontage && !AnimInstance->IsAnyMontagePlaying())
 	{
 		AnimInstance->Montage_Play(ParryMontage);
+		ParryCameraTimelineComp->PlayFromStart(); // 카메라 줌 타임라인 재생
+	}
+}
+
+void APlayerCharacter::UpdateParryCamera(float Value)
+{
+	if (CameraBoom)
+	{
+		CameraBoom->TargetArmLength = Value;
 	}
 }
 
