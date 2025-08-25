@@ -267,6 +267,8 @@ float ASg1Monster1::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	// 상태를 Stunned로 설정 (이미 Stunned 상태였어도 다시 설정)
 	MonsterState = EMonsterState::EMS_Stunned;
 	
+	OnDamaged_BP();
+
 	if (AIController)
 	{
 		AIController->StopMovement();

@@ -75,6 +75,9 @@ public:
 	UPROPERTY()
 	TArray<AActor*> HitActors; // HitActors 선언 추가
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnDamaged_BP();
+
 private:
 	UFUNCTION()
 	void OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -96,6 +99,7 @@ private:
 	void ResetState();
 	void MoveToRandomLocation();
 	void RecoverFromStagger();
+
 
 	UPROPERTY()
 	class AAIController* AIController;
