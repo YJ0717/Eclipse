@@ -120,6 +120,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(WalkAction, ETriggerEvent::Started, this, &APlayerCharacter::StartWalking);
 		EnhancedInputComponent->BindAction(WalkAction, ETriggerEvent::Completed, this, &APlayerCharacter::StopWalking);
 		EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Parry);
+		EnhancedInputComponent->BindAction(SkillAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Skill);
 	}
 }
 
@@ -595,4 +596,13 @@ bool APlayerCharacter::IsParryWindowActive() const
         return CurrentPosition >= ParryStartTime && CurrentPosition <= ParryEndTime;
     }
     return false;
+}
+
+void APlayerCharacter::Skill(const FInputActionValue& Value)
+{
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-3, 2.f, FColor::Yellow, TEXT("R 키 눌림!"));
+	}
+
 }

@@ -60,8 +60,12 @@ protected:
 	void Dodge(const FInputActionValue& Value);
 	void Parry(); // 패링 함수
 
+	void Skill(const FInputActionValue& Value); // 스킬 함수
+
 	void StartWalking(const FInputActionValue& Value);
 	void StopWalking(const FInputActionValue& Value);
+
+	
 
 	UFUNCTION()
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
@@ -122,6 +126,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* ParryAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SkillAction;
 
 		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Input)
 	float TurnRateGamepad;
@@ -235,6 +242,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parry")
 	float ParryEndTime;
+
+
 
 	UPROPERTY()
 	ASg1Monster1* RiposteTarget;
