@@ -26,6 +26,12 @@ class ECLIPSE_API APlayerCharacter : public ACharacter
 
 public:
 	APlayerCharacter();
+	//힐 관련 이미지용 함수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	float MaxEst;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	float CurrentEst;
 
 	// UI에서 현재 스태미너를 가져올 수 있도록 BlueprintReadOnly로 설정합니다.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
@@ -61,7 +67,7 @@ protected:
 	void Parry(); // 패링 함수
 
 	void Skill(const FInputActionValue& Value); // 스킬 함수
-
+	void Heal(const FInputActionValue& Value); // HP회복
 	void StartWalking(const FInputActionValue& Value);
 	void StopWalking(const FInputActionValue& Value);
 
@@ -130,6 +136,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SkillAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* HealAction;
+
 		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Input)
 	float TurnRateGamepad;
 
@@ -197,6 +206,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Effects, meta = (AllowPrivateAccess = "true"))
 	UParticleSystem* ImpactEffect;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
+	UAnimMontage* HealMontage; // 힐용
 
 	// 한 번의 공격 동안 이미 맞은 액터 목록 <--- 추가
 	UPROPERTY()

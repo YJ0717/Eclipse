@@ -59,7 +59,7 @@ APlayerCharacter::APlayerCharacter()
 	RiposteTarget = nullptr;
 	ParryStartTime = 0.1f;
 	ParryEndTime = 0.4f;
-
+	
 	// 스태미너 변수 초기화
 	MaxStamina = 100.f;
 	CurrentStamina = MaxStamina;
@@ -70,7 +70,11 @@ APlayerCharacter::APlayerCharacter()
 	// HP 변수 초기화
 	MaxHealth = 100.f;
 	CurrentHealth = MaxHealth;
-
+	
+	//에스트관련 초기화
+	MaxEst = 5.f;
+	CurrentEst = MaxEst;
+	
 	// 기본 달리기 속도를 600으로 설정합니다. (블루프린트에서 덮어쓸 수 있습니다)
 	GetCharacterMovement()->MaxWalkSpeed = 600.f;
 
@@ -120,7 +124,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(WalkAction, ETriggerEvent::Started, this, &APlayerCharacter::StartWalking);
 		EnhancedInputComponent->BindAction(WalkAction, ETriggerEvent::Completed, this, &APlayerCharacter::StopWalking);
 		EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Parry);
-		EnhancedInputComponent->BindAction(SkillAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Skill);
+		EnhancedInputComponent->BindAction(SkillAction, ETriggerEvent::Started, this, &APlayerCharacter::Skill);
+		EnhancedInputComponent->BindAction(HealAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Heal);
 	}
 }
 
@@ -256,6 +261,8 @@ void APlayerCharacter::Attack()
 		}
 	}
 }
+
+
 
 void APlayerCharacter::SaveAttack_Notify()
 {
@@ -600,9 +607,49 @@ bool APlayerCharacter::IsParryWindowActive() const
 
 void APlayerCharacter::Skill(const FInputActionValue& Value)
 {
+	
+
+	if (CurrentEst > 0) {
+		float HealAmount = 50.f;
+
+		CurrentHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.f, MaxHealth);
+		if (HealMontage)
+		{
+			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+			if (AnimInstance && !AnimInstance->IsAnyMontagePlaying())
+			{
+				AnimInstance->Montage_Play(HealMontage);
+			}
+		}
+		CurrentEst -= 1;
+	}
 	if (GEngine)
 	{
-		GEngine->AddOnScreenDebugMessage(-3, 2.f, FColor::Yellow, TEXT("R 키 눌림!"));
+		GEngine->AddOnScreenDebugMessage(-3, 2.f, FColor::Yellow, FString::Printf(TEXT("R 키 눌림! %.2f"), CurrentEst));
 	}
+	
+}
+
+void APlayerCharacter::Heal(const FInputActionValue& Value)
+{
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-4, 2.f, FColor::Yellow, TEXT("heal 키 눌림!"));
+	}
+	if (CurrentEst > 0) {
+		float HealAmount = 50.f;
+
+		CurrentHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.f, MaxHealth);
+		if (HealMontage)
+		{
+			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+			if (AnimInstance && !AnimInstance->IsAnyMontagePlaying())
+			{
+				AnimInstance->Montage_Play(HealMontage);
+			}
+		}
+		CurrentEst -= 1;
+	}
+	
 
 }
