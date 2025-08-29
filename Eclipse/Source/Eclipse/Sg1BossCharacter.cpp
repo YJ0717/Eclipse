@@ -5,14 +5,38 @@
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 #include "Animation/AnimInstance.h"
-#include "GameFramework/CharacterMovementComponent.h" // 이 줄이 추가되었습니다.
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/BoxComponent.h"
+#include "PlayerCharacter.h"
+#include "AIController.h" // AI 컨트롤러를 사용하기 위해 추가
+#include "BrainComponent.h" // 브레인 컴포넌트를 사용하기 위해 추가
 
 ASg1BossCharacter::ASg1BossCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    // 보스가 움직이지 않도록 설정
-    GetCharacterMovement()->SetMovementMode(MOVE_None);
+	// 캐릭터의 기본 캡슐이 플레이어를 막도록 설정합니다.
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
+
+	// --- 공격 충돌 박스 생성 및 설정 ---
+	LeftLegAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("LeftLegAttackCollision"));
+	LeftLegAttackCollision->SetupAttachment(GetMesh(), FName("L_Toe0Socket")); // 사용자가 알려준 소켓 이름으로 직접 지정
+	
+	RightLegAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("RightLegAttackCollision"));
+	RightLegAttackCollision->SetupAttachment(GetMesh(), FName("R_Toe0Socket")); // 사용자가 알려준 소켓 이름으로 직접 지정
+
+	HeadAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("HeadAttackCollision"));
+	HeadAttackCollision->SetupAttachment(GetMesh(), FName("HeadSocket")); // 사용자가 알려준 소켓 이름으로 직접 지정
+
+	TArray<UBoxComponent*> AttackCollisions = { LeftLegAttackCollision, RightLegAttackCollision, HeadAttackCollision };
+	for (UBoxComponent* Collision : AttackCollisions)
+	{
+		Collision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Collision->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
+		Collision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+		Collision->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
+	}
 }
 
 void ASg1BossCharacter::BeginPlay()
@@ -21,29 +45,48 @@ void ASg1BossCharacter::BeginPlay()
 
     CurrentHealth = MaxHealth;
 
-    // 게임이 시작될 때 플레이어 캐릭터를 찾아 저장해둡니다.
     PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
-
     if (!PlayerCharacter)
     {
         UE_LOG(LogTemp, Warning, TEXT("Sg1BossCharacter: PlayerCharacter not found!"));
     }
+
+	// 각 공격 충돌 박스의 오버랩 이벤트에 함수를 연결(바인딩)합니다.
+	LeftLegAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ASg1BossCharacter::OnAttackOverlapBegin);
+	RightLegAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ASg1BossCharacter::OnAttackOverlapBegin);
+	HeadAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ASg1BossCharacter::OnAttackOverlapBegin);
 }
 
 void ASg1BossCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    // 플레이어가 존재하고, 현재 공격 중이 아니며, 공격 쿨타임이 지났을 때만 AI 로직을 실행합니다.
-    if (PlayerCharacter && CanAttack())
+    if (PlayerCharacter && CanAttack() && CurrentHealth > 0)
     {
         DecideAttackPattern();
     }
 }
 
+float ASg1BossCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	// 이미 죽었다면 데미지를 받지 않습니다.
+	if (CurrentHealth <= 0.f) return 0.f;
+
+	const float DamageTaken = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	CurrentHealth = FMath::Clamp(CurrentHealth - DamageTaken, 0.f, MaxHealth);
+
+	UE_LOG(LogTemp, Warning, TEXT("Sg1Boss took %.f damage. Current Health: %.f"), DamageTaken, CurrentHealth);
+
+	if (CurrentHealth <= 0.f)
+	{
+		Die();
+	}
+
+	return DamageTaken;
+}
+
 bool ASg1BossCharacter::CanAttack() const
 {
-    // 현재 공격 중이 아니고, 마지막 공격 시간으로부터 쿨타임만큼 시간이 지났는지 확인
     return !bIsAttacking && (GetWorld()->GetTimeSeconds() - LastAttackTime > AttackCooldown);
 }
 
@@ -51,35 +94,22 @@ void ASg1BossCharacter::DecideAttackPattern()
 {
     if (!PlayerCharacter) return;
 
-    // 보스에서 플레이어로 향하는 방향 벡터를 구합니다.
     const FVector BossToPlayer = PlayerCharacter->GetActorLocation() - GetActorLocation();
     const FVector BossForwardVector = GetActorForwardVector();
-
-    // 보스의 오른쪽 방향 벡터를 구합니다.
     const FVector BossRightVector = FVector::CrossProduct(FVector::UpVector, BossForwardVector);
-
-    // 방향 벡터를 정규화합니다.
     const FVector BossToPlayerNormalized = BossToPlayer.GetSafeNormal();
-
-    // 내적(Dot Product)을 사용하여 플레이어가 보스의 왼쪽에 있는지 오른쪽에 있는지 판단합니다.
-    // 결과가 양수(+)이면 오른쪽, 음수(-)이면 왼쪽에 있다는 의미입니다.
     const float DotProductWithRight = FVector::DotProduct(BossToPlayerNormalized, BossRightVector);
-
-    // 정면과의 각도를 계산하여 플레이어가 정면에 있는지 판단합니다.
     const float DotProductWithForward = FVector::DotProduct(BossToPlayerNormalized, BossForwardVector);
     const float AngleWithForward = FMath::Acos(DotProductWithForward);
 
-    // 플레이어가 정면 30도 내에 있다면 헤드 어택
     if (FMath::RadiansToDegrees(AngleWithForward) < 30.0f)
     {
         PerformHeadAttack();
     }
-    // 플레이어가 오른쪽에 있다면 라이트 레그 어택
     else if (DotProductWithRight > 0)
     {
         PerformRightLegAttack();
     }
-    // 플레이어가 왼쪽에 있다면 레프트 레그 어택
     else
     {
         PerformLeftLegAttack();
@@ -93,11 +123,7 @@ void ASg1BossCharacter::PerformLeftLegAttack()
         bIsAttacking = true;
         LastAttackTime = GetWorld()->GetTimeSeconds();
         UE_LOG(LogTemp, Log, TEXT("Performing Left Leg Attack"));
-
-        // 몽타주 재생
         PlayAnimMontage(LeftLegAttackMontage);
-
-        // TODO: 몽타주가 끝나면 bIsAttacking을 false로 설정하는 로직 추가 필요 (AnimNotify 또는 타이머 사용)
     }
 }
 
@@ -121,6 +147,86 @@ void ASg1BossCharacter::PerformHeadAttack()
         UE_LOG(LogTemp, Log, TEXT("Performing Head Attack"));
         PlayAnimMontage(HeadAttackMontage);
     }
+}
+
+void ASg1BossCharacter::Die()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Sg1Boss has died."));
+
+	// AI 로직을 멈춥니다.
+	AAIController* AIController = Cast<AAIController>(GetController());
+	if (AIController && AIController->BrainComponent)
+	{
+		AIController->BrainComponent->StopLogic("Death");
+	}
+
+	// 충돌을 없애고 래그돌을 활성화합니다.
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+	GetMesh()->SetSimulatePhysics(true);
+
+	if (DeathMontage)
+	{
+		PlayAnimMontage(DeathMontage);
+	}
+
+	// 10초 뒤에 액터를 파괴합니다.
+	SetLifeSpan(10.0f);
+}
+
+void ASg1BossCharacter::ActivateAttackCollision(EAttackPart PartToActivate)
+{
+	// 새로운 공격을 시작하기 전에 이전에 맞았던 액터 목록을 비웁니다.
+	HitActors.Empty();
+
+	switch (PartToActivate)
+	{
+		case EAttackPart::LeftLeg:
+			UE_LOG(LogTemp, Log, TEXT("Activating Left Leg Collision"));
+			LeftLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			break;
+		case EAttackPart::RightLeg:
+			UE_LOG(LogTemp, Log, TEXT("Activating Right Leg Collision"));
+			RightLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			break;
+		case EAttackPart::Head:
+			UE_LOG(LogTemp, Log, TEXT("Activating Head Collision"));
+			HeadAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			break;
+	}
+}
+
+void ASg1BossCharacter::DeactivateAttackCollision()
+{
+	UE_LOG(LogTemp, Log, TEXT("Deactivating All Attack Collision"));
+	LeftLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	RightLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HeadAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitActors.Empty(); // 확실하게 한번 더 비워줍니다.
+}
+
+void ASg1BossCharacter::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	// 자기 자신이나, 유효하지 않은 액터는 무시합니다.
+	if (!OtherActor || OtherActor == this) return;
+
+	// 한 번의 공격 모션에서 같은 대상을 여러 번 때리는 것을 방지합니다.
+	if (HitActors.Contains(OtherActor)) return;
+
+	// 오버랩된 액터가 플레이어인지 확인합니다.
+	APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor);
+	if (Player)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Sg1Boss HIT Player: %s with %s"), *Player->GetName(), *OverlappedComponent->GetName());
+		HitActors.Add(OtherActor); // 맞춘 액터 목록에 추가
+		UGameplayStatics::ApplyDamage(Player, AttackDamage, GetController(), this, UDamageType::StaticClass());
+	}
+}
+
+// 이 함수는 AnimNotify에서 호출하여 공격이 끝났음을 알리고 상태를 초기화하는 데 사용합니다.
+void ASg1BossCharacter::ResetAttackState()
+{
+	bIsAttacking = false;
 }
 
 
