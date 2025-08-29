@@ -21,13 +21,13 @@ ASg1BossCharacter::ASg1BossCharacter()
 
 	// --- 공격 충돌 박스 생성 및 설정 ---
 	LeftLegAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("LeftLegAttackCollision"));
-	LeftLegAttackCollision->SetupAttachment(GetMesh(), FName("L_Toe0Socket")); // 사용자가 알려준 소켓 이름으로 직접 지정
+	LeftLegAttackCollision->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("L_Toe0Socket"));
 	
 	RightLegAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("RightLegAttackCollision"));
-	RightLegAttackCollision->SetupAttachment(GetMesh(), FName("R_Toe0Socket")); // 사용자가 알려준 소켓 이름으로 직접 지정
+	RightLegAttackCollision->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_Toe0Socket"));
 
 	HeadAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("HeadAttackCollision"));
-	HeadAttackCollision->SetupAttachment(GetMesh(), FName("HeadSocket")); // 사용자가 알려준 소켓 이름으로 직접 지정
+	HeadAttackCollision->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HeadSocket"));
 
 	TArray<UBoxComponent*> AttackCollisions = { LeftLegAttackCollision, RightLegAttackCollision, HeadAttackCollision };
 	for (UBoxComponent* Collision : AttackCollisions)
@@ -42,6 +42,24 @@ ASg1BossCharacter::ASg1BossCharacter()
 void ASg1BossCharacter::BeginPlay()
 {
     Super::BeginPlay();
+
+    // --- DEBUGGING ATTACHMENT ---
+    UE_LOG(LogTemp, Error, TEXT("--- Checking Collision Attachments ---"));
+
+    FString LeftLegParent = LeftLegAttackCollision->GetAttachParent() ? LeftLegAttackCollision->GetAttachParent()->GetName() : TEXT("NONE");
+    FName LeftLegSocket = LeftLegAttackCollision->GetAttachSocketName();
+    UE_LOG(LogTemp, Error, TEXT("LeftLegAttackCollision: Parent=[%s], Socket=[%s]"), *LeftLegParent, *LeftLegSocket.ToString());
+
+    FString RightLegParent = RightLegAttackCollision->GetAttachParent() ? RightLegAttackCollision->GetAttachParent()->GetName() : TEXT("NONE");
+    FName RightLegSocket = RightLegAttackCollision->GetAttachSocketName();
+    UE_LOG(LogTemp, Error, TEXT("RightLegAttackCollision: Parent=[%s], Socket=[%s]"), *RightLegParent, *RightLegSocket.ToString());
+
+    FString HeadParent = HeadAttackCollision->GetAttachParent() ? HeadAttackCollision->GetAttachParent()->GetName() : TEXT("NONE");
+    FName HeadSocket = HeadAttackCollision->GetAttachSocketName();
+    UE_LOG(LogTemp, Error, TEXT("HeadAttackCollision: Parent=[%s], Socket=[%s]"), *HeadParent, *HeadSocket.ToString());
+
+    UE_LOG(LogTemp, Error, TEXT("--- End Attachment Check ---"));
+    // --- END DEBUGGING ---
 
     CurrentHealth = MaxHealth;
 
@@ -118,6 +136,11 @@ void ASg1BossCharacter::DecideAttackPattern()
 
 void ASg1BossCharacter::PerformLeftLegAttack()
 {
+    if (GetMesh()->GetAnimInstance() && GetMesh()->GetAnimInstance()->Montage_IsPlaying(nullptr))
+    {
+        return; // 이미 다른 몽타주가 재생 중이면 시작하지 않음
+    }
+
     if (LeftLegAttackMontage)
     {
         bIsAttacking = true;
@@ -129,6 +152,11 @@ void ASg1BossCharacter::PerformLeftLegAttack()
 
 void ASg1BossCharacter::PerformRightLegAttack()
 {
+    if (GetMesh()->GetAnimInstance() && GetMesh()->GetAnimInstance()->Montage_IsPlaying(nullptr))
+    {
+        return; // 이미 다른 몽타주가 재생 중이면 시작하지 않음
+    }
+
     if (RightLegAttackMontage)
     {
         bIsAttacking = true;
@@ -140,6 +168,11 @@ void ASg1BossCharacter::PerformRightLegAttack()
 
 void ASg1BossCharacter::PerformHeadAttack()
 {
+    if (GetMesh()->GetAnimInstance() && GetMesh()->GetAnimInstance()->Montage_IsPlaying(nullptr))
+    {
+        return; // 이미 다른 몽TA주가 재생 중이면 시작하지 않음
+    }
+
     if (HeadAttackMontage)
     {
         bIsAttacking = true;
@@ -176,21 +209,29 @@ void ASg1BossCharacter::Die()
 
 void ASg1BossCharacter::ActivateAttackCollision(EAttackPart PartToActivate)
 {
+	UE_LOG(LogTemp, Warning, TEXT("--- ActivateAttackCollision CALLED ---"));
 	// 새로운 공격을 시작하기 전에 이전에 맞았던 액터 목록을 비웁니다.
 	HitActors.Empty();
 
+	// 안전을 위해 모든 공격 콜리전을 먼저 끕니다.
+	UE_LOG(LogTemp, Warning, TEXT("Deactivating ALL boxes before activation."));
+	LeftLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	RightLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HeadAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// 이제 필요한 콜리전만 다시 켭니다.
 	switch (PartToActivate)
 	{
 		case EAttackPart::LeftLeg:
-			UE_LOG(LogTemp, Log, TEXT("Activating Left Leg Collision"));
+			UE_LOG(LogTemp, Warning, TEXT("ACTIVATING Left Leg Collision ONLY."));
 			LeftLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 			break;
 		case EAttackPart::RightLeg:
-			UE_LOG(LogTemp, Log, TEXT("Activating Right Leg Collision"));
+			UE_LOG(LogTemp, Warning, TEXT("ACTIVATING Right Leg Collision ONLY."));
 			RightLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 			break;
 		case EAttackPart::Head:
-			UE_LOG(LogTemp, Log, TEXT("Activating Head Collision"));
+			UE_LOG(LogTemp, Warning, TEXT("ACTIVATING Head Collision ONLY."));
 			HeadAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 			break;
 	}
@@ -198,7 +239,7 @@ void ASg1BossCharacter::ActivateAttackCollision(EAttackPart PartToActivate)
 
 void ASg1BossCharacter::DeactivateAttackCollision()
 {
-	UE_LOG(LogTemp, Log, TEXT("Deactivating All Attack Collision"));
+	UE_LOG(LogTemp, Warning, TEXT("--- DeactivateAttackCollision CALLED. Turning ALL boxes OFF. ---"));
 	LeftLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	RightLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	HeadAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
