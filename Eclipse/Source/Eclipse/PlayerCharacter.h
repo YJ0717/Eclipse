@@ -32,6 +32,13 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float CurrentEst;
+	//스킬용 함수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
+	TArray<UAnimMontage*> SkillMontages;;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
+	float SkillAttack;
+
 
 	// UI에서 현재 스태미너를 가져올 수 있도록 BlueprintReadOnly로 설정합니다.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")

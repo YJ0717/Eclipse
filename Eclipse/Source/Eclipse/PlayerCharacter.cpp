@@ -125,7 +125,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(WalkAction, ETriggerEvent::Completed, this, &APlayerCharacter::StopWalking);
 		EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Parry);
 		EnhancedInputComponent->BindAction(SkillAction, ETriggerEvent::Started, this, &APlayerCharacter::Skill);
-		EnhancedInputComponent->BindAction(HealAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Heal);
+		EnhancedInputComponent->BindAction(HealAction, ETriggerEvent::Started, this, &APlayerCharacter::Heal);
 	}
 }
 
@@ -607,25 +607,12 @@ bool APlayerCharacter::IsParryWindowActive() const
 
 void APlayerCharacter::Skill(const FInputActionValue& Value)
 {
-	
-
-	if (CurrentEst > 0) {
-		float HealAmount = 50.f;
-
-		CurrentHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.f, MaxHealth);
-		if (HealMontage)
+	if (SkillMontages.IsValidIndex(0)) {
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		if (AnimInstance && !AnimInstance->IsAnyMontagePlaying())
 		{
-			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-			if (AnimInstance && !AnimInstance->IsAnyMontagePlaying())
-			{
-				AnimInstance->Montage_Play(HealMontage);
-			}
+			AnimInstance->Montage_Play(SkillMontages[SkillAttack]);
 		}
-		CurrentEst -= 1;
-	}
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-3, 2.f, FColor::Yellow, FString::Printf(TEXT("R 키 눌림! %.2f"), CurrentEst));
 	}
 	
 }
