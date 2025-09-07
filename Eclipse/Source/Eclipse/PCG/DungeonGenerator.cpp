@@ -22,9 +22,17 @@ void ADungeonGenerator::Tick(float DeltaTime)
 
 void ADungeonGenerator::GenerateDungeon()
 {
+    // 최소 2개의 복도가 생성되도록 보장 (NumRooms >= 3)
+    if (NumRooms < 3)
+    {
+        NumRooms = 3;
+        UE_LOG(LogTemp, Warning, TEXT("NumRooms was less than 3, setting to 3 to ensure at least 2 corridors."));
+    }
+
     // 생성 전 이전 던전 정리
     ClearDungeon();
     OccupiedRoomAreas.Empty(); // 방 영역 초기화
+    OccupiedWallLocations.Empty(); // 벽 위치 초기화
 
     if (!FloorMesh || !WallMesh || !CorridorMesh)
     {
@@ -116,6 +124,12 @@ void ADungeonGenerator::GenerateDungeon()
         {
             SpawnRoom(ProposedNextRoomLocation, ProposedRoomSize);
             OccupiedRoomAreas.Add(ProposedRoomRect);
+
+            // 복도 생성
+            FVector CorridorStartPoint = CurrentLocation; // 이전 방의 중심
+            FVector CorridorEndPoint = ProposedNextRoomLocation; // 새로 배치된 방의 중심
+            SpawnCorridor(CorridorStartPoint, CorridorEndPoint);
+            
             CurrentLocation = ProposedNextRoomLocation;
         }
         else
@@ -149,7 +163,7 @@ void ADungeonGenerator::SpawnRoom(const FVector& Center, const FIntPoint& Size)
     );
 
     // Calculate the actual center of the (0,0) tile in world coordinates
-    FVector FirstTileWorldCenter = Center + FirstTileCenterOffset;
+    FVector FirstTileWorldCenter = Center + FirstTileCenterOffset + FloorOffset;
 
     // Spawn Floor Tiles
     for (int32 x = 0; x < Size.X; ++x)
@@ -157,7 +171,7 @@ void ADungeonGenerator::SpawnRoom(const FVector& Center, const FIntPoint& Size)
         for (int32 y = 0; y < Size.Y; ++y)
         {
             FVector FloorTileLocation = FirstTileWorldCenter + FVector(x * TileSize, y * TileSize, 0);
-            SpawnMesh(FloorMesh, FloorTileLocation, FRotator::ZeroRotator);
+            SpawnMesh(FloorMesh, FloorTileLocation, FRotator::ZeroRotator, FloorScale);
         }
     }
 
@@ -168,12 +182,16 @@ void ADungeonGenerator::SpawnRoom(const FVector& Center, const FIntPoint& Size)
                 // 하단 벽
                 FVector BottomWallLocation = FirstTileWorldCenter + FVector(WallX * TileSize, -0.5f * TileSize, 0);
                 FRotator BottomWallRotation = GetWallRotationForLocation(WallX, 0, Size, EWallType::Bottom);
-                SpawnMesh(WallMesh, BottomWallLocation, BottomWallRotation);
+                AActor* SpawnedWallActor = SpawnMesh(WallMesh, BottomWallLocation, BottomWallRotation);
+                OccupiedWallLocations.Add(WorldToGrid(BottomWallLocation - FVector(0, 0.01f, 0)), SpawnedWallActor);
+                UE_LOG(LogTemp, Warning, TEXT("SpawnRoom: Added wall at grid %d, %d"), WorldToGrid(BottomWallLocation - FVector(0, 0.01f, 0)).X, WorldToGrid(BottomWallLocation - FVector(0, 0.01f, 0)).Y);
 
                 // 상단 벽
                 FVector TopWallLocation = FirstTileWorldCenter + FVector(WallX * TileSize, (Size.Y - 0.5f) * TileSize, 0);
                 FRotator TopWallRotation = GetWallRotationForLocation(WallX, Size.Y - 1, Size, EWallType::Top);
-                SpawnMesh(WallMesh, TopWallLocation, TopWallRotation);
+                SpawnedWallActor = SpawnMesh(WallMesh, TopWallLocation, TopWallRotation);
+                OccupiedWallLocations.Add(WorldToGrid(TopWallLocation + FVector(0, 0.01f, 0)), SpawnedWallActor);
+                UE_LOG(LogTemp, Warning, TEXT("SpawnRoom: Added wall at grid %d, %d"), WorldToGrid(TopWallLocation + FVector(0, 0.01f, 0)).X, WorldToGrid(TopWallLocation + FVector(0, 0.01f, 0)).Y);
             }
 
             // Y축을 따라 벽 생성 (왼쪽 및 오른쪽) - 코너 포함 (겹침 발생)
@@ -182,12 +200,16 @@ void ADungeonGenerator::SpawnRoom(const FVector& Center, const FIntPoint& Size)
                 // 왼쪽 벽
                 FVector LeftWallLocation = FirstTileWorldCenter + FVector(-0.5f * TileSize, WallY * TileSize, 0);
                 FRotator LeftWallRotation = GetWallRotationForLocation(0, WallY, Size, EWallType::Left);
-                SpawnMesh(WallMesh, LeftWallLocation, LeftWallRotation);
+                AActor* SpawnedWallActor = SpawnMesh(WallMesh, LeftWallLocation, LeftWallRotation);
+                OccupiedWallLocations.Add(WorldToGrid(LeftWallLocation - FVector(0.01f, 0, 0)), SpawnedWallActor);
+                UE_LOG(LogTemp, Warning, TEXT("SpawnRoom: Added wall at grid %d, %d"), WorldToGrid(LeftWallLocation - FVector(0.01f, 0, 0)).X, WorldToGrid(LeftWallLocation - FVector(0.01f, 0, 0)).Y);
 
                 // 오른쪽 벽
                 FVector RightWallLocation = FirstTileWorldCenter + FVector((Size.X - 0.5f) * TileSize, WallY * TileSize, 0);
                 FRotator RightWallRotation = GetWallRotationForLocation(Size.X - 1, WallY, Size, EWallType::Right);
-                SpawnMesh(WallMesh, RightWallLocation, RightWallRotation);
+                SpawnedWallActor = SpawnMesh(WallMesh, RightWallLocation, RightWallRotation);
+                OccupiedWallLocations.Add(WorldToGrid(RightWallLocation + FVector(0.01f, 0, 0)), SpawnedWallActor);
+                UE_LOG(LogTemp, Warning, TEXT("SpawnRoom: Added wall at grid %d, %d"), WorldToGrid(RightWallLocation + FVector(0.01f, 0, 0)).X, WorldToGrid(RightWallLocation + FVector(0.01f, 0, 0)).Y);
             }
 }
 
@@ -255,6 +277,11 @@ bool ADungeonGenerator::DoesRoomOverlap(const FIntRect& ProposedRoomRect, const 
     return false;
 }
 
+FIntPoint ADungeonGenerator::WorldToGrid(const FVector& WorldLocation)
+{
+    return FIntPoint(FMath::FloorToInt(WorldLocation.X / TileSize), FMath::FloorToInt(WorldLocation.Y / TileSize));
+}
+
 void ADungeonGenerator::SpawnCorridor(const FVector& Start, const FVector& End)
 {
     FVector Direction = (End - Start).GetSafeNormal();
@@ -264,11 +291,26 @@ void ADungeonGenerator::SpawnCorridor(const FVector& Start, const FVector& End)
     for (int32 i = 0; i < NumTiles; ++i)
     {
         FVector Location = Start + Direction * i * TileSize;
+        FIntPoint GridLocation = WorldToGrid(Location);
+        UE_LOG(LogTemp, Warning, TEXT("SpawnCorridor: Checking corridor at grid %d, %d"), GridLocation.X, GridLocation.Y);
+
+        // 복도 경로에 벽이 있는지 확인하고 제거
+        if (OccupiedWallLocations.Contains(GridLocation))
+        {
+            AActor* WallActor = OccupiedWallLocations[GridLocation];
+            if (WallActor)
+            {
+                WallActor->Destroy();
+                UE_LOG(LogTemp, Warning, TEXT("SpawnCorridor: Destroyed wall at grid %d, %d"), GridLocation.X, GridLocation.Y);
+            }
+            OccupiedWallLocations.Remove(GridLocation);
+        }
+
         SpawnMesh(CorridorMesh, Location, Direction.Rotation());
     }
 }
 
-void ADungeonGenerator::SpawnMesh(UStaticMesh* Mesh, const FVector& Location, const FRotator& Rotation)
+AActor* ADungeonGenerator::SpawnMesh(UStaticMesh* Mesh, const FVector& Location, const FRotator& Rotation)
 {
     if (UWorld* World = GetWorld())
     {
@@ -279,6 +321,8 @@ void ADungeonGenerator::SpawnMesh(UStaticMesh* Mesh, const FVector& Location, co
         {
             MeshActor->GetStaticMeshComponent()->SetStaticMesh(Mesh);
             SpawnedActors.Add(MeshActor);
+            return MeshActor; // Return the spawned actor
         }
     }
+    return nullptr; // Return nullptr if spawning fails
 }

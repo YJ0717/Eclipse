@@ -59,6 +59,12 @@ public:
     UPROPERTY(EditAnywhere, Category = "Dungeon | Settings")
     float TileSize = 500.0f; // 메시 하나의 크기 (cm)
 
+    UPROPERTY(EditAnywhere, Category = "Dungeon | Settings")
+    FVector FloorOffset = FVector(0.0f, 0.0f, 0.0f); // 바닥 타일 위치 조정 오프셋 (cm)
+
+    UPROPERTY(EditAnywhere, Category = "Dungeon | Settings")
+    FVector FloorScale = FVector(1.0f, 1.0f, 1.0f); // 바닥 타일 스케일 조정
+
     // 에디터에서 던전을 생성하는 버튼
     UFUNCTION(CallInEditor, Category = "Dungeon | Generation")
     void GenerateDungeon();
@@ -70,10 +76,12 @@ public:
 private:
     void SpawnRoom(const FVector& Center, const FIntPoint& Size);
     void SpawnCorridor(const FVector& Start, const FVector& End);
-    void SpawnMesh(UStaticMesh* Mesh, const FVector& Location, const FRotator& Rotation);
+    AActor* SpawnMesh(UStaticMesh* Mesh, const FVector& Location, const FRotator& Rotation, const FVector& Scale = FVector(1.0f, 1.0f, 1.0f));
     FRotator GetWallRotationForLocation(int32 WallX, int32 WallY, const FIntPoint& Size, EWallType WallType); // New helper function
 
     bool DoesRoomOverlap(const FIntRect& ProposedRoomRect, const TArray<FIntRect>& ExistingRoomRects); // New helper function declaration
+
+    FIntPoint WorldToGrid(const FVector& WorldLocation); // New helper function declaration
 
     // 생성된 액터들을 추적하기 위한 배열
     UPROPERTY()
@@ -81,4 +89,7 @@ private:
 
     // 생성된 방의 영역을 추적하기 위한 배열
     TArray<FIntRect> OccupiedRoomAreas;
+
+    // 생성된 벽의 그리드 위치를 추적하기 위한 배열
+    TMap<FIntPoint, AActor*> OccupiedWallLocations;
 };
