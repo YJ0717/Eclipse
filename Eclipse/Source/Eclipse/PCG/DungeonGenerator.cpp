@@ -163,14 +163,20 @@ void ADungeonGenerator::SpawnRoom(const FVector& Center, const FIntPoint& Size)
     );
 
     // Calculate the actual center of the (0,0) tile in world coordinates
-    FVector FirstTileWorldCenter = Center + FirstTileCenterOffset + FloorOffset;
+    FVector BaseTileWorldCenter = Center + FirstTileCenterOffset;
+
+    // Calculate the base location for floor tiles, including the offset
+    FVector FloorBaseLocation = BaseTileWorldCenter + FloorOffset;
+
+    // Calculate the base location for wall tiles, including the offset
+    FVector WallBaseLocation = BaseTileWorldCenter + WallOffset;
 
     // Spawn Floor Tiles
     for (int32 x = 0; x < Size.X; ++x)
     {
         for (int32 y = 0; y < Size.Y; ++y)
         {
-            FVector FloorTileLocation = FirstTileWorldCenter + FVector(x * TileSize, y * TileSize, 0);
+            FVector FloorTileLocation = FloorBaseLocation + FVector(x * TileSize, y * TileSize, 0);
             SpawnMesh(FloorMesh, FloorTileLocation, FRotator::ZeroRotator, FloorScale);
         }
     }
@@ -180,14 +186,14 @@ void ADungeonGenerator::SpawnRoom(const FVector& Center, const FIntPoint& Size)
             for (int32 WallX = 0; WallX < Size.X; ++WallX)
             {
                 // 하단 벽
-                FVector BottomWallLocation = FirstTileWorldCenter + FVector(WallX * TileSize, -0.5f * TileSize, 0);
+                FVector BottomWallLocation = WallBaseLocation + FVector(WallX * TileSize, -0.5f * TileSize, 0);
                 FRotator BottomWallRotation = GetWallRotationForLocation(WallX, 0, Size, EWallType::Bottom);
                 AActor* SpawnedWallActor = SpawnMesh(WallMesh, BottomWallLocation, BottomWallRotation);
                 OccupiedWallLocations.Add(WorldToGrid(BottomWallLocation - FVector(0, 0.01f, 0)), SpawnedWallActor);
                 UE_LOG(LogTemp, Warning, TEXT("SpawnRoom: Added wall at grid %d, %d"), WorldToGrid(BottomWallLocation - FVector(0, 0.01f, 0)).X, WorldToGrid(BottomWallLocation - FVector(0, 0.01f, 0)).Y);
 
                 // 상단 벽
-                FVector TopWallLocation = FirstTileWorldCenter + FVector(WallX * TileSize, (Size.Y - 0.5f) * TileSize, 0);
+                FVector TopWallLocation = WallBaseLocation + FVector(WallX * TileSize, (Size.Y - 0.5f) * TileSize, 0);
                 FRotator TopWallRotation = GetWallRotationForLocation(WallX, Size.Y - 1, Size, EWallType::Top);
                 SpawnedWallActor = SpawnMesh(WallMesh, TopWallLocation, TopWallRotation);
                 OccupiedWallLocations.Add(WorldToGrid(TopWallLocation + FVector(0, 0.01f, 0)), SpawnedWallActor);
@@ -198,14 +204,14 @@ void ADungeonGenerator::SpawnRoom(const FVector& Center, const FIntPoint& Size)
             for (int32 WallY = 0; WallY < Size.Y; ++WallY) // WallY = 0 (하단) 및 WallY = Size.Y - 1 (상단)도 포함
             {
                 // 왼쪽 벽
-                FVector LeftWallLocation = FirstTileWorldCenter + FVector(-0.5f * TileSize, WallY * TileSize, 0);
+                FVector LeftWallLocation = WallBaseLocation + FVector(-0.5f * TileSize, WallY * TileSize, 0);
                 FRotator LeftWallRotation = GetWallRotationForLocation(0, WallY, Size, EWallType::Left);
                 AActor* SpawnedWallActor = SpawnMesh(WallMesh, LeftWallLocation, LeftWallRotation);
                 OccupiedWallLocations.Add(WorldToGrid(LeftWallLocation - FVector(0.01f, 0, 0)), SpawnedWallActor);
                 UE_LOG(LogTemp, Warning, TEXT("SpawnRoom: Added wall at grid %d, %d"), WorldToGrid(LeftWallLocation - FVector(0.01f, 0, 0)).X, WorldToGrid(LeftWallLocation - FVector(0.01f, 0, 0)).Y);
 
                 // 오른쪽 벽
-                FVector RightWallLocation = FirstTileWorldCenter + FVector((Size.X - 0.5f) * TileSize, WallY * TileSize, 0);
+                FVector RightWallLocation = WallBaseLocation + FVector((Size.X - 0.5f) * TileSize, WallY * TileSize, 0);
                 FRotator RightWallRotation = GetWallRotationForLocation(Size.X - 1, WallY, Size, EWallType::Right);
                 SpawnedWallActor = SpawnMesh(WallMesh, RightWallLocation, RightWallRotation);
                 OccupiedWallLocations.Add(WorldToGrid(RightWallLocation + FVector(0.01f, 0, 0)), SpawnedWallActor);

@@ -63,6 +63,9 @@ public:
     FVector FloorOffset = FVector(0.0f, 0.0f, 0.0f); // 바닥 타일 위치 조정 오프셋 (cm)
 
     UPROPERTY(EditAnywhere, Category = "Dungeon | Settings")
+    FVector WallOffset = FVector(-250.0f, -250.0f, 0.0f); // 벽 타일 위치 조정 오프셋 (cm)
+
+    UPROPERTY(EditAnywhere, Category = "Dungeon | Settings")
     FVector FloorScale = FVector(1.0f, 1.0f, 1.0f); // 바닥 타일 스케일 조정
 
     // 에디터에서 던전을 생성하는 버튼
