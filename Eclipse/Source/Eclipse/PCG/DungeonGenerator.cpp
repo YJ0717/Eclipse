@@ -310,7 +310,7 @@ void ADungeonGenerator::SpawnCorridor(const FVector& Start, const FVector& End)
     }
 }
 
-AActor* ADungeonGenerator::SpawnMesh(UStaticMesh* Mesh, const FVector& Location, const FRotator& Rotation)
+AActor* ADungeonGenerator::SpawnMesh(UStaticMesh* Mesh, const FVector& Location, const FRotator& Rotation, const FVector& Scale)
 {
     if (UWorld* World = GetWorld())
     {
@@ -320,6 +320,7 @@ AActor* ADungeonGenerator::SpawnMesh(UStaticMesh* Mesh, const FVector& Location,
         if (MeshActor)
         {
             MeshActor->GetStaticMeshComponent()->SetStaticMesh(Mesh);
+            MeshActor->SetActorScale3D(Scale);
             SpawnedActors.Add(MeshActor);
             return MeshActor; // Return the spawned actor
         }
