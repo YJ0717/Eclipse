@@ -243,6 +243,8 @@ void APlayerCharacter::Attack()
 	{
 		if (ComboCount == 0)
 		{
+
+			
 			if (AttackMontages.IsValidIndex(0))
 			{
 				UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -251,13 +253,21 @@ void APlayerCharacter::Attack()
 					bIsAttacking = true;
 					ComboCount = 1;
 					bNextAttackRequested = false;
-					AnimInstance->Montage_Play(AttackMontages[0]);
+					// 현재 속도 가져오기
+					float Speed = GetCharacterMovement()->Velocity.Size();
+					if (Speed >= 600.f) bIsRunningAttack = true;
+					
+					// 속도에 따라 재생할 몽타주 선택
+					UAnimMontage* MontageToPlay = (Speed >= 600.f) ? RunAttackMontages[0] : AttackMontages[0];
+
+					AnimInstance->Montage_Play(MontageToPlay);
 				}
 			}
 		}
 		else
 		{
 			bNextAttackRequested = true;
+
 		}
 	}
 }
@@ -269,12 +279,14 @@ void APlayerCharacter::SaveAttack_Notify()
 	if (bNextAttackRequested)
 	{
 		bNextAttackRequested = false;
-		if (AttackMontages.IsValidIndex(ComboCount))
+		TArray<UAnimMontage*>& SelectedMontages = bIsRunningAttack ? RunAttackMontages : AttackMontages;
+
+		if (SelectedMontages.IsValidIndex(ComboCount))
 		{
 			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 			if (AnimInstance)
 			{
-				AnimInstance->Montage_Play(AttackMontages[ComboCount]);
+				AnimInstance->Montage_Play(SelectedMontages[ComboCount]);
 				ComboCount++;
 			}
 		}
@@ -290,6 +302,7 @@ void APlayerCharacter::ResetCombo_Notify()
 	ComboCount = 0;
 	bNextAttackRequested = false;
 	bIsAttacking = false;
+	bIsRunningAttack = false;
 }
 
 void APlayerCharacter::StartWalking(const FInputActionValue& Value)
@@ -377,6 +390,8 @@ void APlayerCharacter::Parry()
 {
 	if (!bIsWeaponEquipped) return; // 무기를 들었을 때만 패링 가능
 
+	if (GetCharacterMovement()->IsFalling()) return; // 공중 패링X
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && ParryMontage && !AnimInstance->IsAnyMontagePlaying())
 	{
@@ -412,7 +427,7 @@ void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 	}
 	// HitMontage는 OnHitAnimationEnded에서 처리되므로 여기서는 일반적인 입력 활성화 로직을 제거합니다.
 	// 다른 몽타주가 끝났을 때만 입력 활성화
-	else if (Montage != HitMontage && Montage != DeathMontage && Montage != ParryMontage) // ParryMontage도 추가
+	else if (Montage != HitMontage && Montage != DeathMontage && Montage != ParryMontage && Montage != HealMontage) // ParryMontage도 추가
 	{
 		if (APlayerController* PC = Cast<APlayerController>(GetController()))
 		{
@@ -444,6 +459,8 @@ void APlayerCharacter::Tick(float DeltaTime)
 		float Radius = 75.f;
 		DrawDebugSphere(GetWorld(), Center, Radius, 12, FColor::Cyan, false, 0.f, 0, 1.f);
 	}
+
+
 }
 
 float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -607,36 +624,59 @@ bool APlayerCharacter::IsParryWindowActive() const
 
 void APlayerCharacter::Skill(const FInputActionValue& Value)
 {
-	if (SkillMontages.IsValidIndex(0)) {
+	if (bIsWeaponEquipped && SkillMontages.IsValidIndex(SkillAttack))
+	{
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 		if (AnimInstance && !AnimInstance->IsAnyMontagePlaying())
 		{
+			
+			bIsUsingSkill = true;
+
+			
+			GetCharacterMovement()->DisableMovement();
+
+			
 			AnimInstance->Montage_Play(SkillMontages[SkillAttack]);
+
+			
+			FOnMontageEnded MontageEndedDelegate;
+			MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnSkillMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, SkillMontages[SkillAttack]);
 		}
 	}
-	
+}
+void APlayerCharacter::OnSkillMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	bIsUsingSkill = false;
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 }
 
 void APlayerCharacter::Heal(const FInputActionValue& Value)
 {
-	if (GEngine)
+	if (bIsHealing || CurrentEst <= 0)
+		return;
+
+	float HealAmount = 50.f;
+	CurrentHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.f, MaxHealth);
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && HealMontage)
 	{
-		GEngine->AddOnScreenDebugMessage(-4, 2.f, FColor::Yellow, TEXT("heal 키 눌림!"));
-	}
-	if (CurrentEst > 0) {
-		float HealAmount = 50.f;
+		bIsHealing = true;
+		AnimInstance->Montage_Play(HealMontage);
 
-		CurrentHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.f, MaxHealth);
-		if (HealMontage)
-		{
-			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-			if (AnimInstance && !AnimInstance->IsAnyMontagePlaying())
-			{
-				AnimInstance->Montage_Play(HealMontage);
-			}
-		}
-		CurrentEst -= 1;
+		FOnMontageEnded MontageEndedDelegate;
+		MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnHealMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, HealMontage);
 	}
-	
 
+	CurrentEst -= 1;
+}
+
+void APlayerCharacter::OnHealMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (Montage == HealMontage)
+	{
+		bIsHealing = false;
+	}
 }

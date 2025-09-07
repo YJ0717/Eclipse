@@ -39,6 +39,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
 	float SkillAttack;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
+	TArray<UAnimMontage*> RunAttackMontages;
 
 	// UI에서 현재 스태미너를 가져올 수 있도록 BlueprintReadOnly로 설정합니다.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
@@ -59,6 +61,8 @@ public:
 	// 피해를 입었을 때 호출될 함수 (오버라이드)
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
+
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -77,8 +81,14 @@ protected:
 	void Heal(const FInputActionValue& Value); // HP회복
 	void StartWalking(const FInputActionValue& Value);
 	void StopWalking(const FInputActionValue& Value);
+	bool bIsHealing = false;
+	bool bIsRunningAttack = false;
+	bool bIsUsingSkill = false;
+	UFUNCTION()
+	void OnSkillMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-	
+	UFUNCTION()
+	void OnHealMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 	UFUNCTION()
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
