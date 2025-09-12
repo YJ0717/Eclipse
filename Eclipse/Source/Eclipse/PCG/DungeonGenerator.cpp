@@ -36,7 +36,7 @@ void ADungeonGenerator::GenerateDungeon()
 
     if (!FloorMesh || !WallMesh || !CorridorMesh)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Dungeon meshes are not set!"));
+        //UE_LOG(LogTemp, Warning, TEXT("Dungeon meshes are not set!"));
         return;
     }
 
@@ -45,8 +45,8 @@ void ADungeonGenerator::GenerateDungeon()
     
     // 첫 번째 방 생성
     FIntPoint InitialRoomSize;
-    InitialRoomSize.X = FMath::RandRange(RoomSizeMin.X, RoomSizeMax.X);
-    InitialRoomSize.Y = FMath::RandRange(RoomSizeMin.Y, RoomSizeMax.Y);
+    InitialRoomSize.X = FMath::RandRange(RoomSizeMin.X / 2, RoomSizeMax.X / 2) * 2;
+    InitialRoomSize.Y = FMath::RandRange(RoomSizeMin.Y / 2, RoomSizeMax.Y / 2) * 2;
 
     SpawnRoom(CurrentLocation, InitialRoomSize);
     
@@ -80,17 +80,18 @@ void ADungeonGenerator::GenerateDungeon()
 
         for (int32 RetryCount = 0; RetryCount < MaxRetries; ++RetryCount)
         {
-            ProposedRoomSize.X = FMath::RandRange(RoomSizeMin.X, RoomSizeMax.X);
-            ProposedRoomSize.Y = FMath::RandRange(RoomSizeMin.Y, RoomSizeMax.Y);
+            ProposedRoomSize.X = FMath::RandRange(RoomSizeMin.X / 2, RoomSizeMax.X / 2) * 2;
+            ProposedRoomSize.Y = FMath::RandRange(RoomSizeMin.Y / 2, RoomSizeMax.Y / 2) * 2;
 
             // 다음 방으로 이동하기 위한 복도 생성 방향
             FVector Direction;
-            switch (FMath::RandRange(0, 3))
+            if (i % 2 != 0) // 홀수 번째 방은 수평으로 복도 생성
             {
-                case 0: Direction = FVector::ForwardVector; break; // North
-                case 1: Direction = FVector::BackwardVector; break; // South
-                case 2: Direction = FVector::RightVector; break; // East
-                case 3: Direction = FVector::LeftVector; break; // West
+                Direction = (FMath::RandBool()) ? FVector::RightVector : FVector::LeftVector; // East or West
+            }
+            else // 짝수 번째 방은 수직으로 복도 생성
+            {
+                Direction = (FMath::RandBool()) ? FVector::ForwardVector : FVector::BackwardVector; // North or South
             }
 
             ProposedNextRoomLocation = CurrentLocation + Direction * (FMath::Max(ProposedRoomSize.X, ProposedRoomSize.Y) / 2.0f + CorridorLength) * TileSize;
@@ -293,26 +294,53 @@ void ADungeonGenerator::SpawnCorridor(const FVector& Start, const FVector& End)
     FVector Direction = (End - Start).GetSafeNormal();
     float Distance = FVector::Dist(Start, End);
     int32 NumTiles = FMath::CeilToInt(Distance / TileSize);
+    FIntPoint EntrancePoint(0,0);
+    bool bEntranceWallFound = false;
+    bool bExitWallDestroyed = false;
 
     for (int32 i = 0; i < NumTiles; ++i)
     {
         FVector Location = Start + Direction * i * TileSize;
         FIntPoint GridLocation = WorldToGrid(Location);
-        UE_LOG(LogTemp, Warning, TEXT("SpawnCorridor: Checking corridor at grid %d, %d"), GridLocation.X, GridLocation.Y);
 
-        // 복도 경로에 벽이 있는지 확인하고 제거
         if (OccupiedWallLocations.Contains(GridLocation))
         {
-            AActor* WallActor = OccupiedWallLocations[GridLocation];
-            if (WallActor)
+            if (!bExitWallDestroyed)
             {
-                WallActor->Destroy();
-                UE_LOG(LogTemp, Warning, TEXT("SpawnCorridor: Destroyed wall at grid %d, %d"), GridLocation.X, GridLocation.Y);
+                // 첫 번째로 만나는 벽은 출발 지점의 '출구 벽'입니다. 이 벽은 파괴합니다.
+                AActor* WallActor = OccupiedWallLocations[GridLocation];
+                if (WallActor) { WallActor->Destroy(); }
+                OccupiedWallLocations.Remove(GridLocation);
+                bExitWallDestroyed = true;
             }
-            OccupiedWallLocations.Remove(GridLocation);
+            else
+            {
+                // 두 번째 이후로 만나는 벽은 도착 지점의 '입구 벽'입니다.
+                // 이 벽은 파괴하지 않고, 위치만 기록합니다.
+                EntrancePoint = GridLocation;
+                bEntranceWallFound = true;
+            }
         }
 
         SpawnMesh(CorridorMesh, Location, Direction.Rotation());
+    }
+
+    // 입구 벽 위치를 기준으로 왼쪽 벽을 찾아 파괴합니다.
+    if (bEntranceWallFound)
+    {
+        FVector LeftVector = FVector::CrossProduct(Direction, FVector::UpVector);
+        FIntPoint LeftGridOffset = FIntPoint(FMath::RoundToInt(LeftVector.X), FMath::RoundToInt(LeftVector.Y));
+        FIntPoint LeftGridLocation = EntrancePoint + LeftGridOffset;
+
+        if (OccupiedWallLocations.Contains(LeftGridLocation))
+        {
+            AActor* WallActor = OccupiedWallLocations[LeftGridLocation];
+            if (WallActor)
+            {
+                WallActor->Destroy();
+            }
+            OccupiedWallLocations.Remove(LeftGridLocation);
+        }
     }
 }
 
