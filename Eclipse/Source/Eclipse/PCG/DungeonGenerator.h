@@ -53,8 +53,11 @@ public:
     UPROPERTY(EditAnywhere, Category = "Dungeon | Settings")
     FIntPoint RoomSizeMax = FIntPoint(5, 5);
     
-    UPROPERTY(EditAnywhere, Category = "Dungeon | Settings")
-    int32 CorridorLength = 5;
+    UPROPERTY(EditAnywhere, Category = "Dungeon | Settings", meta = (ClampMin = "4"))
+    int32 CorridorLengthMin = 4;
+
+    UPROPERTY(EditAnywhere, Category = "Dungeon | Settings", meta = (ClampMin = "4"))
+    int32 CorridorLengthMax = 8;
 
     UPROPERTY(EditAnywhere, Category = "Dungeon | Settings")
     float TileSize = 500.0f; // 메시 하나의 크기 (cm)

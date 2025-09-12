@@ -76,7 +76,7 @@ void ADungeonGenerator::GenerateDungeon()
         FIntPoint ProposedRoomSize;
         FIntRect ProposedRoomRect;
         bool bRoomPlaced = false;
-        int32 MaxRetries = 100; // 무한 루프 방지를 위한 최대 재시도 횟수
+        int32 MaxRetries = 500; // 무한 루프 방지를 위한 최대 재시도 횟수
 
         for (int32 RetryCount = 0; RetryCount < MaxRetries; ++RetryCount)
         {
@@ -94,7 +94,8 @@ void ADungeonGenerator::GenerateDungeon()
                 Direction = (FMath::RandBool()) ? FVector::ForwardVector : FVector::BackwardVector; // North or South
             }
 
-            ProposedNextRoomLocation = CurrentLocation + Direction * (FMath::Max(ProposedRoomSize.X, ProposedRoomSize.Y) / 2.0f + CorridorLength) * TileSize;
+            int32 RandomCorridorLength = FMath::RandRange(CorridorLengthMin, CorridorLengthMax);
+            ProposedNextRoomLocation = CurrentLocation + Direction * (FMath::Max(ProposedRoomSize.X, ProposedRoomSize.Y) / 2.0f + RandomCorridorLength) * TileSize;
 
             // 제안된 방의 FIntRect 계산
             FVector ProposedFirstTileCenterOffset = FVector(
@@ -307,7 +308,6 @@ void ADungeonGenerator::SpawnCorridor(const FVector& Start, const FVector& End)
         {
             if (!bExitWallDestroyed)
             {
-                // 첫 번째로 만나는 벽은 출발 지점의 '출구 벽'입니다. 이 벽은 파괴합니다.
                 AActor* WallActor = OccupiedWallLocations[GridLocation];
                 if (WallActor) { WallActor->Destroy(); }
                 OccupiedWallLocations.Remove(GridLocation);
@@ -315,8 +315,6 @@ void ADungeonGenerator::SpawnCorridor(const FVector& Start, const FVector& End)
             }
             else
             {
-                // 두 번째 이후로 만나는 벽은 도착 지점의 '입구 벽'입니다.
-                // 이 벽은 파괴하지 않고, 위치만 기록합니다.
                 EntrancePoint = GridLocation;
                 bEntranceWallFound = true;
             }
@@ -325,7 +323,6 @@ void ADungeonGenerator::SpawnCorridor(const FVector& Start, const FVector& End)
         SpawnMesh(CorridorMesh, Location, Direction.Rotation());
     }
 
-    // 입구 벽 위치를 기준으로 왼쪽 벽을 찾아 파괴합니다.
     if (bEntranceWallFound)
     {
         FVector LeftVector = FVector::CrossProduct(Direction, FVector::UpVector);
