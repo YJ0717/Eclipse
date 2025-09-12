@@ -61,7 +61,24 @@ void ASg1BossCharacter::BeginPlay()
     UE_LOG(LogTemp, Error, TEXT("--- End Attachment Check ---"));
     // --- END DEBUGGING ---
 
+
+
+	
+
+	
+
     CurrentHealth = MaxHealth;
+
+	// 부위별 HP 초기화 (총합이 MaxHealth와 일치하도록)
+	PartHealth.Add(EAttackPart::LeftLeg, MaxHealth / 3);
+	PartHealth.Add(EAttackPart::RightLeg, MaxHealth / 3);
+	PartHealth.Add(EAttackPart::Head, MaxHealth / 3);
+	
+	TotalCurrentHealth = 0.f;
+	for (auto& Elem : PartHealth)
+	{
+		TotalCurrentHealth += Elem.Value;
+	}
 
     PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
     if (!PlayerCharacter)
@@ -85,24 +102,29 @@ void ASg1BossCharacter::Tick(float DeltaTime)
     }
 }
 
-float ASg1BossCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+float ASg1BossCharacter::TakeDamage(float DamageAmount, EAttackPart HitPart, AActor* DamageCauser)
 {
-	// 이미 죽었다면 데미지를 받지 않습니다.
-	if (CurrentHealth <= 0.f) return 0.f;
+    // 이미 죽었다면 무시
+    if (TotalCurrentHealth <= 0.f) return 0.f;
 
-	const float DamageTaken = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-	CurrentHealth = FMath::Clamp(CurrentHealth - DamageTaken, 0.f, MaxHealth);
+    // 해당 부위 HP 감소
+    if (PartHealth.Contains(HitPart))
+    {
+        PartHealth[HitPart] = FMath::Clamp(PartHealth[HitPart] - DamageAmount, 0.f, MaxHealth);
 
-	UE_LOG(LogTemp, Warning, TEXT("Sg1Boss took %.f damage. Current Health: %.f"), DamageTaken, CurrentHealth);
+        // 총합 갱신
+        TotalCurrentHealth = 0.f;
+        for (auto& Elem : PartHealth)
+            TotalCurrentHealth += Elem.Value;
 
-	if (CurrentHealth <= 0.f)
-	{
-		Die();
-	}
+        UE_LOG(LogTemp, Warning, TEXT("Boss hit! Part %d HP: %.1f, Total HP: %.1f"), (int32)HitPart, PartHealth[HitPart], TotalCurrentHealth);
 
-	return DamageTaken;
+        if (TotalCurrentHealth <= 0.f)
+            Die();
+    }
+
+    return DamageAmount;
 }
-
 bool ASg1BossCharacter::CanAttack() const
 {
     return !bIsAttacking && (GetWorld()->GetTimeSeconds() - LastAttackTime > AttackCooldown);
@@ -246,24 +268,26 @@ void ASg1BossCharacter::DeactivateAttackCollision()
 	HitActors.Empty(); // 확실하게 한번 더 비워줍니다.
 }
 
-void ASg1BossCharacter::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void ASg1BossCharacter::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	// 자기 자신이나, 유효하지 않은 액터는 무시합니다.
-	if (!OtherActor || OtherActor == this) return;
+    if (!OtherActor || OtherActor == this) return;
+    if (HitActors.Contains(OtherActor)) return;
 
-	// 한 번의 공격 모션에서 같은 대상을 여러 번 때리는 것을 방지합니다.
-	if (HitActors.Contains(OtherActor)) return;
+    APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor);
+    if (Player)
+    {
+        HitActors.Add(OtherActor);
 
-	// 오버랩된 액터가 플레이어인지 확인합니다.
-	APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor);
-	if (Player)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Sg1Boss HIT Player: %s with %s"), *Player->GetName(), *OverlappedComponent->GetName());
-		HitActors.Add(OtherActor); // 맞춘 액터 목록에 추가
-		UGameplayStatics::ApplyDamage(Player, AttackDamage, GetController(), this, UDamageType::StaticClass());
-	}
+        // 어느 부위가 맞았는지 기록
+        if (OverlappedComponent == LeftLegAttackCollision) LastHitPart = EAttackPart::LeftLeg;
+        else if (OverlappedComponent == RightLegAttackCollision) LastHitPart = EAttackPart::RightLeg;
+        else if (OverlappedComponent == HeadAttackCollision) LastHitPart = EAttackPart::Head;
+
+        // TakeDamage 호출 (플레이어 공격력 전달)
+        TakeDamage(Player->AttackDamage, LastHitPart, Player);
+    }
 }
-
 // 이 함수는 AnimNotify에서 호출하여 공격이 끝났음을 알리고 상태를 초기화하는 데 사용합니다.
 void ASg1BossCharacter::ResetAttackState()
 {

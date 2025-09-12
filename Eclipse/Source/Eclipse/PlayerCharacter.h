@@ -61,7 +61,12 @@ public:
 	// 피해를 입었을 때 호출될 함수 (오버라이드)
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
+	// 공격 데미지 <--- 추가
+	UPROPERTY(EditAnywhere, Category = "Weapon")
+	float AttackDamage = 25.0f;
 
+	UPROPERTY(EditAnywhere, Category = "Weapon")
+	float RiposteDamage = 150.0f;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -231,12 +236,7 @@ protected:
 	UPROPERTY()
 	TArray<AActor*> HitActors;
 
-	// 공격 데미지 <--- 추가
-	UPROPERTY(EditAnywhere, Category = "Weapon")
-	float AttackDamage = 25.0f;
-
-	UPROPERTY(EditAnywhere, Category = "Weapon")
-	float RiposteDamage = 150.0f;
+	
 
 	FVector PreviousBladeBaseLocation;
 	FVector PreviousBladeTipLocation;

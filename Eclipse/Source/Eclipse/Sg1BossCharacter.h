@@ -44,6 +44,17 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sg1Boss|Stats")
+	TMap<EAttackPart, float> PartHealth;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Sg1Boss|Stats")
+	float TotalCurrentHealth;
+
+	
+
+	// 지금 맞은 부위 저장
+	EAttackPart LastHitPart;
+
 	// -- 기본 스탯 --
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sg1Boss|Stats")
 	float MaxHealth = 2000.0f;
@@ -68,7 +79,7 @@ public:
 	UAnimMontage* DeathMontage;
 
 	// -- 데미지 처리 --
-	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+	float TakeDamage(float DamageAmount, EAttackPart HitPart, AActor* DamageCauser);
 
 	// -- 공격 판정 관련 함수 --
 	UFUNCTION(BlueprintCallable, Category = "Sg1Boss|Attack")
