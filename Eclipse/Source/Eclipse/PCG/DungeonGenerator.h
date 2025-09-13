@@ -69,10 +69,10 @@ public:
     FVector WallOffset = FVector(-250.0f, -250.0f, 0.0f); // 벽 타일 위치 조정 오프셋 (cm)
 
     UPROPERTY(EditAnywhere, Category = "Dungeon | Settings")
-    FVector CorridorLeftWallOffset = FVector(245.0f, 0.0f, 0.0f); // 복도 왼쪽 벽 타일 위치 조정 오프셋 (cm)
+    FVector CorridorLeftWallOffset = FVector(245.0f, -6.0f, 0.0f); // 복도 왼쪽 벽 타일 위치 조정 오프셋 (cm)
 
     UPROPERTY(EditAnywhere, Category = "Dungeon | Settings")
-    FVector CorridorRightWallOffset = FVector(250.0f, -500.0f, 0.0f); // 복도 오른쪽 벽 타일 위치 조정 오프셋 (cm)
+    FVector CorridorRightWallOffset = FVector(240.0f, -495.0f, 0.0f); // 복도 오른쪽 벽 타일 위치 조정 오프셋 (cm)
 
     UPROPERTY(EditAnywhere, Category = "Dungeon | Settings")
     FVector FloorScale = FVector(1.0f, 1.0f, 1.0f); // 바닥 타일 스케일 조정
