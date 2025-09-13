@@ -295,48 +295,59 @@ void ADungeonGenerator::SpawnCorridor(const FVector& Start, const FVector& End)
     FVector Direction = (End - Start).GetSafeNormal();
     float Distance = FVector::Dist(Start, End);
     int32 NumTiles = FMath::CeilToInt(Distance / TileSize);
-    FIntPoint EntrancePoint(0,0);
-    bool bEntranceWallFound = false;
-    bool bExitWallDestroyed = false;
 
     for (int32 i = 0; i < NumTiles; ++i)
     {
-        FVector Location = Start + Direction * i * TileSize;
-        FIntPoint GridLocation = WorldToGrid(Location);
+        FVector TileLocation = Start + Direction * i * TileSize;
+        FIntPoint GridLocation = WorldToGrid(TileLocation);
 
+        // --- 1. Destroy any existing room walls to make an opening ---
         if (OccupiedWallLocations.Contains(GridLocation))
         {
-            if (!bExitWallDestroyed)
+            AActor* WallActor = OccupiedWallLocations.FindAndRemoveChecked(GridLocation);
+            if (WallActor)
             {
-                AActor* WallActor = OccupiedWallLocations[GridLocation];
-                if (WallActor) { WallActor->Destroy(); }
-                OccupiedWallLocations.Remove(GridLocation);
-                bExitWallDestroyed = true;
-            }
-            else
-            {
-                EntrancePoint = GridLocation;
-                bEntranceWallFound = true;
+                // We need to remove it from the main list to prevent it from being destroyed again in ClearDungeon
+                SpawnedActors.Remove(WallActor); 
+                WallActor->Destroy();
             }
         }
 
-        SpawnMesh(CorridorMesh, Location, Direction.Rotation());
-    }
+        // --- 2. Spawn the corridor floor ---
+        SpawnMesh(CorridorMesh, TileLocation, Direction.Rotation());
 
-    if (bEntranceWallFound)
-    {
-        FVector LeftVector = FVector::CrossProduct(Direction, FVector::UpVector);
-        FIntPoint LeftGridOffset = FIntPoint(FMath::RoundToInt(LeftVector.X), FMath::RoundToInt(LeftVector.Y));
-        FIntPoint LeftGridLocation = EntrancePoint + LeftGridOffset;
-
-        if (OccupiedWallLocations.Contains(LeftGridLocation))
+        // --- 3. Check if this tile is inside a room ---
+        bool bIsInRoom = false;
+        for (const FIntRect& RoomRect : OccupiedRoomAreas)
         {
-            AActor* WallActor = OccupiedWallLocations[LeftGridLocation];
-            if (WallActor)
+            // Check if the grid location is within the bounds of any room.
+            if (RoomRect.Contains(GridLocation))
             {
-                WallActor->Destroy();
+                bIsInRoom = true;
+                break;
             }
-            OccupiedWallLocations.Remove(LeftGridLocation);
+        }
+
+        // --- 4. If NOT in a room, spawn corridor walls ---
+        if (!bIsInRoom)
+        {
+            // This tile is in the space between rooms, so spawn walls.
+            FVector LeftVector = FVector::CrossProduct(Direction, FVector::UpVector).GetSafeNormal();
+            
+            // Wall rotation should be parallel to the corridor.
+            FRotator WallRotation = Direction.Rotation();
+
+            // Apply individual offsets for left and right walls, rotated to match the wall's orientation.
+            FVector RotatedLeftOffset = WallRotation.RotateVector(CorridorLeftWallOffset);
+            FVector LeftWallLocation = TileLocation + LeftVector * TileSize + RotatedLeftOffset;
+
+            FVector RotatedRightOffset = WallRotation.RotateVector(CorridorRightWallOffset);
+            FVector RightWallLocation = TileLocation - LeftVector * TileSize + RotatedRightOffset;
+
+            // Spawn the walls. 
+            // We don't add these to OccupiedWallLocations to prevent them from being deleted by other logic.
+            SpawnMesh(WallMesh, LeftWallLocation, WallRotation);
+            SpawnMesh(WallMesh, RightWallLocation, WallRotation);
         }
     }
 }
