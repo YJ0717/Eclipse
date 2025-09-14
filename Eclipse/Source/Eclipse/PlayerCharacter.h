@@ -18,6 +18,7 @@ class UCurveFloat;
 class UTimelineComponent;
 
 class ASg1Monster1;
+class ASg1BossCharacter;
 
 UCLASS()
 class ECLIPSE_API APlayerCharacter : public ACharacter
@@ -26,6 +27,7 @@ class ECLIPSE_API APlayerCharacter : public ACharacter
 
 public:
 	APlayerCharacter();
+	
 	//힐 관련 이미지용 함수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float MaxEst;
@@ -34,11 +36,13 @@ public:
 	float CurrentEst;
 	//스킬용 함수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
-	TArray<UAnimMontage*> SkillMontages;;
+	TArray<UAnimMontage*> SkillMontages;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
 	float SkillAttack;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
+	TArray<UAnimMontage*> RunAttackMontages;
 
 	// UI에서 현재 스태미너를 가져올 수 있도록 BlueprintReadOnly로 설정합니다.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
@@ -59,6 +63,30 @@ public:
 	// 피해를 입었을 때 호출될 함수 (오버라이드)
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
+	// 공격 데미지 <--- 추가
+	UPROPERTY(EditAnywhere, Category = "Weapon")
+	float AttackDamage = 25.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon")
+	float RiposteDamage = 150.0f;
+	
+	//카메라설정;;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float MinTargetArmLength = 200.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float DefaultTargetArmLength = 350.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float BossNearDistance = 300.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	FVector DefaultSocketOffset = FVector(0.f, 60.f, 70.f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	FVector BossSocketOffset = FVector(0.f, 60.f, 200.f);
+
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -77,8 +105,14 @@ protected:
 	void Heal(const FInputActionValue& Value); // HP회복
 	void StartWalking(const FInputActionValue& Value);
 	void StopWalking(const FInputActionValue& Value);
+	bool bIsHealing = false;
+	bool bIsRunningAttack = false;
+	bool bIsUsingSkill = false;
+	UFUNCTION()
+	void OnSkillMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-	
+	UFUNCTION()
+	void OnHealMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 	UFUNCTION()
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
@@ -221,12 +255,7 @@ protected:
 	UPROPERTY()
 	TArray<AActor*> HitActors;
 
-	// 공격 데미지 <--- 추가
-	UPROPERTY(EditAnywhere, Category = "Weapon")
-	float AttackDamage = 25.0f;
-
-	UPROPERTY(EditAnywhere, Category = "Weapon")
-	float RiposteDamage = 150.0f;
+	
 
 	FVector PreviousBladeBaseLocation;
 	FVector PreviousBladeTipLocation;
