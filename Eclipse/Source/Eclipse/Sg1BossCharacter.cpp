@@ -11,6 +11,10 @@
 #include "PlayerCharacter.h"
 #include "AIController.h" // AI 컨트롤러를 사용하기 위해 추가
 #include "BrainComponent.h" // 브레인 컴포넌트를 사용하기 위해 추가
+#include "GameFramework/DamageType.h"
+#include "Engine/DamageEvents.h"
+
+
 
 ASg1BossCharacter::ASg1BossCharacter()
 {
@@ -29,14 +33,44 @@ ASg1BossCharacter::ASg1BossCharacter()
 	HeadAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("HeadAttackCollision"));
 	HeadAttackCollision->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HeadSocket"));
 
-	TArray<UBoxComponent*> AttackCollisions = { LeftLegAttackCollision, RightLegAttackCollision, HeadAttackCollision };
-	for (UBoxComponent* Collision : AttackCollisions)
-	{
-		Collision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		Collision->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
-		Collision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-		Collision->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
-	}
+
+    LeftLegHitCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("LeftLegHitCollision"));
+    LeftLegHitCollision->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("L_Toe0Socket"));
+
+    RightLegHitCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("RightLegHitCollision"));
+    RightLegHitCollision->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_Toe0Socket"));
+
+    HeadHitCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("HeadHitCollision"));
+    HeadHitCollision->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HeadSocket"));
+
+
+    TArray<UBoxComponent*> AttackCollisions = { LeftLegAttackCollision, RightLegAttackCollision, HeadAttackCollision };
+    for (UBoxComponent* Collision : AttackCollisions)
+    {
+        Collision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Collision->SetCollisionObjectType(ECC_WorldDynamic);
+        Collision->SetCollisionResponseToAllChannels(ECR_Ignore);
+        Collision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);   // 플레이어 캐릭터와 충돌 (보스 공격)
+        Collision->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
+        
+    }
+    HitCollisions = { LeftLegHitCollision, RightLegHitCollision, HeadHitCollision };
+    for (UBoxComponent* Collision : HitCollisions)
+    {
+        Collision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        Collision->SetCollisionObjectType(ECC_WorldDynamic);
+        Collision->SetCollisionResponseToAllChannels(ECR_Ignore);
+
+        // 무기(Box)가 WorldDynamic이니까 여기서 Block 해줘야 Trace/Overlap에서 Comp로 잡힘
+        Collision->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
+
+        // 필요하면 Pawn도 Block
+        // Collision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+
+        Collision->SetGenerateOverlapEvents(true);
+    }
+
+    GetMesh()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 }
 
 void ASg1BossCharacter::BeginPlay()
@@ -90,11 +124,21 @@ void ASg1BossCharacter::BeginPlay()
 	LeftLegAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ASg1BossCharacter::OnAttackOverlapBegin);
 	RightLegAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ASg1BossCharacter::OnAttackOverlapBegin);
 	HeadAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ASg1BossCharacter::OnAttackOverlapBegin);
+
+
+    LeftLegHitCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    RightLegHitCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    HeadHitCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    
 }
 
 void ASg1BossCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+
+
+
+
 
     if (PlayerCharacter && CanAttack() && CurrentHealth > 0)
     {
@@ -102,29 +146,55 @@ void ASg1BossCharacter::Tick(float DeltaTime)
     }
 }
 
-float ASg1BossCharacter::TakeDamage(float DamageAmount, EAttackPart HitPart, AActor* DamageCauser)
+
+float ASg1BossCharacter::TakeDamage(float DamageAmount,
+    FDamageEvent const& DamageEvent,
+    AController* EventInstigator,
+    AActor* DamageCauser)
 {
-    // 이미 죽었다면 무시
+    Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
     if (TotalCurrentHealth <= 0.f) return 0.f;
 
-    // 해당 부위 HP 감소
+    EAttackPart HitPart = EAttackPart::Head;
+
+    if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))          
+    {
+        const FPointDamageEvent* PointEvent = static_cast<const FPointDamageEvent*>(&DamageEvent);
+        UPrimitiveComponent* HitComp = PointEvent->HitInfo.Component.Get();
+        UE_LOG(LogTemp, Warning, TEXT("[Boss::TakeDamage] HitComp=%s"), HitComp ? *HitComp->GetName() : TEXT("NULL"));
+
+        if (HitComp == LeftLegHitCollision)      HitPart = EAttackPart::LeftLeg;
+        else if (HitComp == RightLegHitCollision)HitPart = EAttackPart::RightLeg;
+        else if (HitComp == HeadHitCollision)    HitPart = EAttackPart::Head;
+    }
+
     if (PartHealth.Contains(HitPart))
     {
-        PartHealth[HitPart] = FMath::Clamp(PartHealth[HitPart] - DamageAmount, 0.f, MaxHealth);
+        float OldHP = PartHealth[HitPart];
+        PartHealth[HitPart] = FMath::Clamp(OldHP - DamageAmount, 0.f, MaxHealth);
 
         // 총합 갱신
         TotalCurrentHealth = 0.f;
-        for (auto& Elem : PartHealth)
-            TotalCurrentHealth += Elem.Value;
+        for (auto& Elem : PartHealth) TotalCurrentHealth += Elem.Value;
 
-        UE_LOG(LogTemp, Warning, TEXT("Boss hit! Part %d HP: %.1f, Total HP: %.1f"), (int32)HitPart, PartHealth[HitPart], TotalCurrentHealth);
+        UE_LOG(LogTemp, Warning, TEXT("[Boss::TakeDamage] Part=%d %.1f -> %.1f | Total=%.1f"),
+            (int32)HitPart, OldHP, PartHealth[HitPart], TotalCurrentHealth);
 
-        if (TotalCurrentHealth <= 0.f)
-            Die();
+        if (PartHealth[HitPart] <= 0.f)
+        {
+
+            UE_LOG(LogTemp, Warning, TEXT("[Boss] Part %d destroyed (disable its attacks)."), (int32)HitPart);
+            
+            OnPartDestroyed_BP(HitPart);
+        }
+        if (TotalCurrentHealth <= 0.f) Die();
     }
 
     return DamageAmount;
 }
+
+
 bool ASg1BossCharacter::CanAttack() const
 {
     return !bIsAttacking && (GetWorld()->GetTimeSeconds() - LastAttackTime > AttackCooldown);
@@ -158,6 +228,12 @@ void ASg1BossCharacter::DecideAttackPattern()
 
 void ASg1BossCharacter::PerformLeftLegAttack()
 {
+    if (PartHealth.Contains(EAttackPart::LeftLeg) && PartHealth[EAttackPart::LeftLeg] <= 0.f)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Left Leg is destroyed! Cannot attack with Left Leg."));
+        return;
+    }
+
     if (GetMesh()->GetAnimInstance() && GetMesh()->GetAnimInstance()->Montage_IsPlaying(nullptr))
     {
         return; // 이미 다른 몽타주가 재생 중이면 시작하지 않음
@@ -174,6 +250,12 @@ void ASg1BossCharacter::PerformLeftLegAttack()
 
 void ASg1BossCharacter::PerformRightLegAttack()
 {
+
+    if (PartHealth.Contains(EAttackPart::RightLeg) && PartHealth[EAttackPart::RightLeg] <= 0.f)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Right Leg is destroyed! Cannot attack with Right Leg."));
+        return;
+    }
     if (GetMesh()->GetAnimInstance() && GetMesh()->GetAnimInstance()->Montage_IsPlaying(nullptr))
     {
         return; // 이미 다른 몽타주가 재생 중이면 시작하지 않음
@@ -190,6 +272,11 @@ void ASg1BossCharacter::PerformRightLegAttack()
 
 void ASg1BossCharacter::PerformHeadAttack()
 {
+    if (PartHealth.Contains(EAttackPart::Head) && PartHealth[EAttackPart::Head] <= 0.f)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Head is destroyed! Cannot attack with Head."));
+        return;
+    }
     if (GetMesh()->GetAnimInstance() && GetMesh()->GetAnimInstance()->Montage_IsPlaying(nullptr))
     {
         return; // 이미 다른 몽TA주가 재생 중이면 시작하지 않음
@@ -277,21 +364,38 @@ void ASg1BossCharacter::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComp
     APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor);
     if (Player)
     {
+        UE_LOG(LogTemp, Warning, TEXT("Sg1Boss HIT Player: %s with %s"), *Player->GetName(), *OverlappedComponent->GetName());
         HitActors.Add(OtherActor);
 
-        // 어느 부위가 맞았는지 기록
-        if (OverlappedComponent == LeftLegAttackCollision) LastHitPart = EAttackPart::LeftLeg;
-        else if (OverlappedComponent == RightLegAttackCollision) LastHitPart = EAttackPart::RightLeg;
-        else if (OverlappedComponent == HeadAttackCollision) LastHitPart = EAttackPart::Head;
-
-        // TakeDamage 호출 (플레이어 공격력 전달)
-        TakeDamage(Player->AttackDamage, LastHitPart, Player);
+        UGameplayStatics::ApplyDamage(Player, AttackDamage, GetController(), this, UDamageType::StaticClass());
     }
 }
+
+
+
 // 이 함수는 AnimNotify에서 호출하여 공격이 끝났음을 알리고 상태를 초기화하는 데 사용합니다.
 void ASg1BossCharacter::ResetAttackState()
 {
 	bIsAttacking = false;
+}
+
+EAttackPart ASg1BossCharacter::DetectHitPart(FName BoneName)
+{
+    if (BoneName == FName("Head") || BoneName == FName("HeadSocket"))
+    {
+        return EAttackPart::Head;
+    }
+    else if (BoneName == FName("L_Toe0Socket"))
+    {
+        return EAttackPart::LeftLeg;
+    }
+    else if (BoneName == FName("R_Toe0Socket"))
+    {
+        return EAttackPart::RightLeg;
+    }
+
+    // 기본값 (못 찾았을 경우 머리로 처리)
+    return EAttackPart::Head;
 }
 
 

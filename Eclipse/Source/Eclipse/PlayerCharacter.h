@@ -18,6 +18,7 @@ class UCurveFloat;
 class UTimelineComponent;
 
 class ASg1Monster1;
+class ASg1BossCharacter;
 
 UCLASS()
 class ECLIPSE_API APlayerCharacter : public ACharacter
@@ -26,6 +27,7 @@ class ECLIPSE_API APlayerCharacter : public ACharacter
 
 public:
 	APlayerCharacter();
+	
 	//힐 관련 이미지용 함수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float MaxEst;
@@ -34,7 +36,7 @@ public:
 	float CurrentEst;
 	//스킬용 함수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
-	TArray<UAnimMontage*> SkillMontages;;
+	TArray<UAnimMontage*> SkillMontages;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
 	float SkillAttack;
@@ -68,6 +70,23 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Weapon")
 	float RiposteDamage = 150.0f;
 	
+	//카메라설정;;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float MinTargetArmLength = 200.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float DefaultTargetArmLength = 350.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float BossNearDistance = 300.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	FVector DefaultSocketOffset = FVector(0.f, 60.f, 70.f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	FVector BossSocketOffset = FVector(0.f, 60.f, 200.f);
+
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;

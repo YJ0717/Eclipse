@@ -13,6 +13,7 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Sg1Monster1.h"
+#include "Sg1BossCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Engine/Engine.h"
 #include "RiposteDamageType.h"
@@ -47,6 +48,7 @@ APlayerCharacter::APlayerCharacter()
 	WeaponCollisionBox->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
 	WeaponCollisionBox->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	WeaponCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
+	WeaponCollisionBox->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
 	bIsWeaponEquipped = false;
 	ComboCount = 0;
 	bNextAttackRequested = false;
@@ -107,6 +109,11 @@ void APlayerCharacter::BeginPlay()
     {
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Initial Stamina: %.2f / %.2f"), CurrentStamina, MaxStamina));
     }
+
+
+
+
+
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -460,6 +467,41 @@ void APlayerCharacter::Tick(float DeltaTime)
 		DrawDebugSphere(GetWorld(), Center, Radius, 12, FColor::Cyan, false, 0.f, 0, 1.f);
 	}
 
+	CameraBoom->TargetArmLength = FMath::Clamp(
+		CameraBoom->TargetArmLength,
+		MinTargetArmLength,
+		DefaultTargetArmLength
+	);
+
+	// 2) 보스와 거리 체크
+	AActor* Boss = UGameplayStatics::GetActorOfClass(GetWorld(), ASg1BossCharacter::StaticClass());
+	if (Boss)
+	{
+		float DistanceToBoss = FVector::Dist(GetActorLocation(), Boss->GetActorLocation());
+
+		if (DistanceToBoss < BossNearDistance)
+		{
+			// 보스 가까우면 카메라 위로 이동
+			CameraBoom->SocketOffset = FMath::VInterpTo(
+				CameraBoom->SocketOffset,
+				BossSocketOffset,
+				DeltaTime,
+				5.0f // 부드러운 전환 속도
+			);
+		}
+		else
+		{
+			// 보스 멀어지면 원래대로
+			CameraBoom->SocketOffset = FMath::VInterpTo(
+				CameraBoom->SocketOffset,
+				DefaultSocketOffset,
+				DeltaTime,
+				5.0f
+			);
+		}
+	}
+
+
 
 }
 
@@ -602,6 +644,34 @@ void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent,
 		if (ImpactEffect)
 		{
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
+		}
+	}
+	ASg1BossCharacter* Boss = Cast<ASg1BossCharacter>(OtherActor);
+	if (Boss)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PlayerWeapon] Hit Boss %s Comp=%s"),
+			*Boss->GetName(), OtherComp ? *OtherComp->GetName() : TEXT("NULL"));
+
+		UGameplayStatics::ApplyPointDamage(
+			Boss,
+			AttackDamage,
+			GetActorForwardVector(),
+			SweepResult,    
+			GetController(),
+			this,
+			UDamageType::StaticClass()
+		);
+
+		HitActors.Add(OtherActor);
+
+		if (ImpactEffect)
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(
+				GetWorld(),
+				ImpactEffect,
+				SweepResult.ImpactPoint,
+				SweepResult.ImpactNormal.Rotation()
+			);
 		}
 	}
 }

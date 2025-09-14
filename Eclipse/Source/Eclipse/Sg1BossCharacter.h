@@ -7,6 +7,9 @@
 #include "GameFramework/Character.h"
 #include "Sg1BossCharacter.generated.h"
 
+
+class APlayerCharacter;
+
 // 어떤 공격 부위인지 구분하기 위한 Enum 입니다. 블루프린트에서도 쓸 수 있게 UENUM으로 선언해줍니다.
 UENUM(BlueprintType)
 enum class EAttackPart : uint8
@@ -22,7 +25,13 @@ class ECLIPSE_API ASg1BossCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
+
+	
+
 	ASg1BossCharacter();
+	//피
+	UFUNCTION(BlueprintImplementableEvent, Category = "Boss|Effects")
+	void OnPartDestroyed_BP(EAttackPart DestroyedPart);
 
 	// 공격용 충돌 박스들을 선언합니다. VisibleAnywhere로 해두면 BP에서도 보고 편집할 수 있죠.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Sg1Boss|Attack")
@@ -33,6 +42,21 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Sg1Boss|Attack")
 	class UBoxComponent* HeadAttackCollision;
+	//데미지
+	// 피격용 충돌 박스
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Sg1Boss|Hit")
+	class UBoxComponent* LeftLegHitCollision;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Sg1Boss|Hit")
+	class UBoxComponent* RightLegHitCollision;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Sg1Boss|Hit")
+	class UBoxComponent* HeadHitCollision;
+
+	UPROPERTY()
+	TArray<class UBoxComponent*> HitCollisions;
+
+	EAttackPart DetectHitPart(FName BoneName);
 
 protected:
 	virtual void BeginPlay() override;
@@ -79,7 +103,8 @@ public:
 	UAnimMontage* DeathMontage;
 
 	// -- 데미지 처리 --
-	float TakeDamage(float DamageAmount, EAttackPart HitPart, AActor* DamageCauser);
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+		class AController* EventInstigator, AActor* DamageCauser) override;
 
 	// -- 공격 판정 관련 함수 --
 	UFUNCTION(BlueprintCallable, Category = "Sg1Boss|Attack")
@@ -110,6 +135,9 @@ private:
 	UFUNCTION()
 	void OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	
+
+
 	// 한 번의 공격에 여러 번 데미지가 들어가는 걸 방지하기 위해, 맞은 액터들을 잠시 저장해둘 배열입니다.
 	TArray<AActor*> HitActors;
 
@@ -124,3 +152,4 @@ private:
 	// 공격을 시작할 수 있는지 확인합니다.
 	bool CanAttack() const;
 };
+
