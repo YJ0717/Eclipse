@@ -16,7 +16,8 @@ enum class EAttackPart : uint8
 {
 	LeftLeg,
 	RightLeg,
-	Head
+	Head,
+	None
 };
 
 UCLASS()

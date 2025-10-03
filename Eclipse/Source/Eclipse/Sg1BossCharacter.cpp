@@ -104,9 +104,9 @@ void ASg1BossCharacter::BeginPlay()
     CurrentHealth = MaxHealth;
 
 	// 부위별 HP 초기화 (총합이 MaxHealth와 일치하도록)
-	PartHealth.Add(EAttackPart::LeftLeg, MaxHealth / 3);
-	PartHealth.Add(EAttackPart::RightLeg, MaxHealth / 3);
-	PartHealth.Add(EAttackPart::Head, MaxHealth / 3);
+	PartHealth.Add(EAttackPart::LeftLeg, MaxHealth / 3.0);
+	PartHealth.Add(EAttackPart::RightLeg, MaxHealth / 3.0);
+	PartHealth.Add(EAttackPart::Head, MaxHealth / 3.0);
 	
 	TotalCurrentHealth = 0.f;
 	for (auto& Elem : PartHealth)
@@ -119,6 +119,13 @@ void ASg1BossCharacter::BeginPlay()
     {
         UE_LOG(LogTemp, Warning, TEXT("Sg1BossCharacter: PlayerCharacter not found!"));
     }
+    float Total = 0.f;
+    for (auto& Elem : PartHealth)
+    {
+        Total += Elem.Value;
+        UE_LOG(LogTemp, Warning, TEXT("Part [%d] = %.2f"), (int32)Elem.Key, Elem.Value);
+    }
+    UE_LOG(LogTemp, Warning, TEXT("TotalCurrentHealth = %.2f | Expected MaxHealth = %.2f"), Total, MaxHealth);
 
 	// 각 공격 충돌 박스의 오버랩 이벤트에 함수를 연결(바인딩)합니다.
 	LeftLegAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ASg1BossCharacter::OnAttackOverlapBegin);
@@ -156,7 +163,7 @@ float ASg1BossCharacter::TakeDamage(float DamageAmount,
 
     if (TotalCurrentHealth <= 0.f) return 0.f;
 
-    EAttackPart HitPart = EAttackPart::Head;
+    EAttackPart HitPart = EAttackPart::None;
 
     if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))          
     {
@@ -395,7 +402,7 @@ EAttackPart ASg1BossCharacter::DetectHitPart(FName BoneName)
     }
 
     // 기본값 (못 찾았을 경우 머리로 처리)
-    return EAttackPart::Head;
+    return EAttackPart::None;
 }
 
 

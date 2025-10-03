@@ -51,13 +51,15 @@ APlayerCharacter::APlayerCharacter()
 	WeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	WeaponCollisionBox->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
 
+
+
 	// 수정: 기본적으로 모든 것에 대해 무시(Ignore)로 설정
 	WeaponCollisionBox->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	// 수정: Pawn에 대해서는 Overlap으로 설정 (기존 몬스터 타격 로직 유지)
 	WeaponCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
 	// 수정: WorldDynamic에 대해서는 Block으로 설정 (파괴 가능한 벽과의 충돌 감지용)
-	WeaponCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldDynamic, ECollisionResponse::ECR_Block);
-
+	//WeaponCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldDynamic, ECollisionResponse::ECR_Block);
+	WeaponCollisionBox->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);// 보스 피격 ;;
 	bIsWeaponEquipped = false;
 	ComboCount = 0;
 	bNextAttackRequested = false;
