@@ -22,7 +22,11 @@ public class Eclipse : ModuleRules
 			"UMG"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange(new string[] { 
+			"GeometryCollectionEngine",
+			"FieldSystemEngine",
+			"ChaosSolverEngine"
+		});
 
 		PublicIncludePaths.AddRange(new string[] {
 			"Eclipse",

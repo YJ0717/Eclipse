@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.6",
+	"EngineAssociation": "{8C1AA4B4-4400-5497-FAF5-12A0C1F06CA5}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -33,6 +33,10 @@
 		},
 		{
 			"Name": "GameplayBehaviors",
+			"Enabled": true
+		},
+		{
+			"Name": "FieldSystemPlugin",
 			"Enabled": true
 		}
 	]
