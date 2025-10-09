@@ -19,6 +19,7 @@
 #include "RiposteDamageType.h"
 // DestructibleWall 헤더 추가
 #include "Destructible/DestructibleWall.h"
+#include "GeometryCollection/GeometryCollectionComponent.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -46,6 +47,7 @@ APlayerCharacter::APlayerCharacter()
 	AxeComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	WeaponCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("WeaponCollisionBox"));
 	WeaponCollisionBox->SetupAttachment(AxeComponent);
+	WeaponCollisionBox->SetNotifyRigidBodyCollision(true);
 	// 중요: 게임 시작 시 무기 콜리전이 확실하게 꺼져 있도록 명시적으로 설정합니다.
 	WeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	WeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -58,8 +60,8 @@ APlayerCharacter::APlayerCharacter()
 	// 수정: Pawn에 대해서는 Overlap으로 설정 (기존 몬스터 타격 로직 유지)
 	WeaponCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
 	// 수정: WorldDynamic에 대해서는 Block으로 설정 (파괴 가능한 벽과의 충돌 감지용)
-	//WeaponCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldDynamic, ECollisionResponse::ECR_Block);
-	WeaponCollisionBox->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);// 보스 피격 ;;
+	WeaponCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldDynamic, ECollisionResponse::ECR_Block);
+	//WeaponCollisionBox->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);// 보스 피격 ;;
 	bIsWeaponEquipped = false;
 	ComboCount = 0;
 	bNextAttackRequested = false;
@@ -128,25 +130,35 @@ void APlayerCharacter::BeginPlay()
 // ... 기존 코드 생략 ...
 
 // 새로 추가: OnWeaponHit 함수 구현
+#include "Destructible/PillarDestructible.h"
+
+// 커스텀 채널 정의 (DefaultEngine.ini 기반)
+#define ECC_OutDestruction ECollisionChannel::ECC_GameTraceChannel2
+#define ECC_InnerDestruction ECollisionChannel::ECC_GameTraceChannel3
+
 void APlayerCharacter::OnWeaponHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
     // 부딪힌 액터가 DestructibleWall인지 확인합니다.
     ADestructibleWall* Wall = Cast<ADestructibleWall>(OtherActor);
     if (Wall)
     {
-		// 로그 추가: 어떤 벽에 부딪혔는지 출력합니다.
-		UE_LOG(LogTemp, Warning, TEXT("Weapon Hit Destructible Wall: %s"), *Wall->GetName());
+        Wall->ApplyDamageAtLocation(Hit.Location, 50.f, 100.f);
+    }
 
-        // 충돌 지점(Hit.Location)에 대미지를 가합니다.
-        const float DamageRadius = 50.0f;
-        const float DamageAmount = 100.0f;
-        Wall->ApplyDamageAtLocation(Hit.Location, DamageRadius, DamageAmount);
-
-		// 파티클 효과 추가
-		if (ImpactEffect)
-		{
-			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
-		}
+    // 부딪힌 액터가 PillarDestructible인지 확인합니다.
+    APillarDestructible* Pillar = Cast<APillarDestructible>(OtherActor);
+    if (Pillar)
+    {
+        // 맞은 컴포넌트의 오브젝트 타입으로 겉과 속을 구별
+        ECollisionChannel HitObjectType = OtherComp->GetCollisionObjectType();
+        if (HitObjectType == ECC_OutDestruction)
+        {
+            Pillar->ApplyOuterShellDamage(Hit.ImpactPoint);
+        }
+        else if (HitObjectType == ECC_InnerDestruction)
+        {
+            Pillar->ApplyInnerCoreDamage(Hit.ImpactPoint);
+        }
     }
 }
 
@@ -653,18 +665,12 @@ void APlayerCharacter::OnHitAnimationEnded(UAnimMontage* Montage, bool bInterrup
 
 void APlayerCharacter::StartAttackCollision()
 {
-	// 디버그 로그 추가: 이 함수가 언제 호출되는지 확인합니다.
-	UE_LOG(LogTemp, Error, TEXT("StartAttackCollision CALLED!"));
-
 	HitActors.Empty();
 	WeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 }
 
 void APlayerCharacter::StopAttackCollision()
 {
-	// 디버그 로그 추가: 이 함수가 언제 호출되는지 확인합니다.
-	UE_LOG(LogTemp, Warning, TEXT("StopAttackCollision CALLED!"));
-
 	WeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 

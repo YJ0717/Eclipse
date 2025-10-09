@@ -9,9 +9,9 @@ ADestructibleWall::ADestructibleWall()
 {
     PrimaryActorTick.bCanEverTick = false;
 
-    GeometryCollectionComponent = CreateDefaultSubobject<UGeometryCollectionComponent>(TEXT("GeometryCollection"));
-    SetRootComponent(GeometryCollectionComponent);
-}
+    	GeometryCollectionComponent = CreateDefaultSubobject<UGeometryCollectionComponent>(TEXT("GeometryCollection"));
+    	GeometryCollectionComponent->SetNotifyRigidBodyCollision(true);
+    	SetRootComponent(GeometryCollectionComponent);}
 
 void ADestructibleWall::ApplyDamageAtLocation(const FVector& HitLocation, float DamageRadius, float DamageAmount)
 {

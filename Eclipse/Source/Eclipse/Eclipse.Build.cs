@@ -6,23 +6,23 @@ public class Eclipse : ModuleRules
 {
 	public Eclipse(ReadOnlyTargetRules Target) : base(Target)
 	{
-		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-				PublicDependencyModuleNames.AddRange(new string[] {
-			"Core",
-			"CoreUObject",
-			"Engine",
-			"InputCore",
-			"EnhancedInput",
-			"AIModule",
-			"GameplayTasks",
-			"NavigationSystem",
-			"StateTreeModule",
-			"GameplayStateTreeModule",
-			"UMG"
-		});
+			PublicDependencyModuleNames.AddRange(new string[] {
+		"Core", 
+		"CoreUObject",
+		"Engine",                                                                                                                                                                                                        
+		"InputCore",
+		"EnhancedInput",
+		"AIModule",
+		"GameplayTasks",
+		"NavigationSystem",
+		"StateTreeModule",
+		"GameplayStateTreeModule",
+		"UMG" 
+	});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { 
+        PrivateDependencyModuleNames.AddRange(new string[] { 
 			"GeometryCollectionEngine",
 			"FieldSystemEngine",
 			"ChaosSolverEngine"
