@@ -219,7 +219,7 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	bool bIsParrying = AnimInstance && AnimInstance->Montage_IsPlaying(ParryMontage);
 
-	if (bIsAttacking || bIsParrying)
+	if (bIsAttacking || bIsParrying || bIsUsingSkill)
 	{
 		return;
 	}
