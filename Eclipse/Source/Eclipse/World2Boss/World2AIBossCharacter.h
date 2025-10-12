@@ -4,13 +4,14 @@
 #include "GameFramework/Character.h"
 #include "World2AIBossCharacter.generated.h"
 
-// 보스의 움직임 상태를 정의합니다.
+// 보스의 AI 상태를 정의합니다.
 UENUM(BlueprintType)
-enum class EBossMovementState : uint8
+enum class EBossAIState : uint8
 {
-    Idle    UMETA(DisplayName = "Idle"),
-    Walking UMETA(DisplayName = "Walking"),
-    Sprinting UMETA(DisplayName = "Sprinting")
+    Repositioning       UMETA(DisplayName = "Repositioning"),      // 재배치 (플레이어 주위 선회)
+    ClosingDistance     UMETA(DisplayName = "Closing Distance"),   // 거리 좁히기
+    Attacking           UMETA(DisplayName = "Attacking"),          // 공격 중
+    Retreating          UMETA(DisplayName = "Retreating")          // 후퇴
 };
 
 class APlayerCharacter;
@@ -29,6 +30,9 @@ protected:
 public:
     virtual void Tick(float DeltaTime) override;
 
+    // 데미지를 받았을 때 호출될 함수 (AActor로부터 오버라이드)
+    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
 private:
     // 플레이어와 마주보는 로직
     void FacePlayer(float DeltaTime);
@@ -40,47 +44,53 @@ private:
     void UpdateMovementState();
 
 private:
-    // 상태 변경을 위한 타이머
-    FTimerHandle StateChangeTimer;
+    // AI의 핵심 의사결정을 내리는 함수
+    void MakeDecision();
+
+    // 각 상태에 따른 실제 움직임을 처리하는 함수
+    void ExecuteState(float DeltaTime);
+
+private:
+    // 현재 AI 상태
+    EBossAIState CurrentAIState;
+
+    // 다음 의사결정까지의 시간을 제어하는 타이머
+    FTimerHandle DecisionTimer;
 
 protected:
-    // 보스의 현재 움직임 상태 (블루프린트에서 읽기 가능)
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|State")
-    EBossMovementState CurrentMovementState;
+    // 보스가 선회할 방향 (-1 or 1)
+    float CirclingDirection;
 
-protected:
-    // 플레이어 캐릭터에 대한 참조
+    // 플레이어 캐릭터 참조
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
     APlayerCharacter* PlayerCharacter;
 
-    // --- AI Movement Parameters ---
+    // --- AI 행동 파라미터 ---
 
-    // 플레이어와 유지하려는 최소/최대 거리
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
-    float MinIdealDistance = 450.0f;
+    // 공격을 시작하는 거리
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
+    float AttackRange = 300.0f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
-    float MaxIdealDistance = 700.0f;
+    // 재배치 시 유지하려는 거리 (선회 거리)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
+    float RepositionDistance = 700.0f;
 
-    // 걷기 및 뛰기 속도
+    // 의사결정 주기 (초)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
+    float DecisionInterval = 2.0f;
+
+    // 후퇴하는 시간
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
+    float RetreatDuration = 1.5f;
+
+    // --- AI 속도 파라미터 ---
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
     float WalkSpeed = 150.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
-    float SprintSpeed = 400.0f;
-    
-    // 좌우로 움직이는 속도
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
-    float StrafeSpeed = 250.0f;
+    float SprintSpeed = 500.0f;
 
-    // 회전 속도
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
     float RotationSpeed = 5.0f;
-
-    // 상태 변경 주기 (최소/최대 시간)
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|State")
-    float MinStateChangeTime = 2.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|State")
-    float MaxStateChangeTime = 5.0f;
 };

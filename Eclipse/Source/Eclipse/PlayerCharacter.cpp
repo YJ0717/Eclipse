@@ -14,6 +14,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Sg1Monster1.h"
 #include "Sg1BossCharacter.h"
+#include "World2Boss/World2AIBossCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Engine/Engine.h"
 #include "RiposteDamageType.h"
@@ -718,6 +719,20 @@ void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent,
 				SweepResult.ImpactPoint,
 				SweepResult.ImpactNormal.Rotation()
 			);
+		}
+	}
+
+	// 새로 추가: World2Boss와의 충돌 처리
+	AWorld2AIBossCharacter* World2Boss = Cast<AWorld2AIBossCharacter>(OtherActor);
+	if (World2Boss && !HitActors.Contains(World2Boss))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Player's weapon hit World2Boss: %s"), *World2Boss->GetName());
+		UGameplayStatics::ApplyDamage(World2Boss, AttackDamage, GetController(), this, UDamageType::StaticClass());
+		HitActors.Add(OtherActor);
+
+		if (ImpactEffect)
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
 		}
 	}
 }
