@@ -19,7 +19,7 @@ public class Eclipse : ModuleRules
 		"NavigationSystem",
 		"StateTreeModule",
 		"GameplayStateTreeModule",
-		"UMG" 
+		"UMG"
 	});
 
         PrivateDependencyModuleNames.AddRange(new string[] { 

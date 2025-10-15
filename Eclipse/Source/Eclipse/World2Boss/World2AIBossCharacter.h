@@ -8,10 +8,11 @@
 UENUM(BlueprintType)
 enum class EBossAIState : uint8
 {
-    Repositioning       UMETA(DisplayName = "Repositioning"),      // 재배치 (플레이어 주위 선회)
-    ClosingDistance     UMETA(DisplayName = "Closing Distance"),   // 거리 좁히기
-    Attacking           UMETA(DisplayName = "Attacking"),          // 공격 중
-    Retreating          UMETA(DisplayName = "Retreating")          // 후퇴
+    Watching            UMETA(DisplayName = "Watching"),          // 플레이어 관망
+    Circling            UMETA(DisplayName = "Circling"),          // 선회하며 각 재기
+    Approaching         UMETA(DisplayName = "Approaching"),       // 접근
+    BackingOff          UMETA(DisplayName = "BackingOff"),        // 거리 벌리기
+    Attacking           UMETA(DisplayName = "Attacking")           // 공격
 };
 
 class APlayerCharacter;
@@ -36,9 +37,6 @@ public:
 private:
     // 플레이어와 마주보는 로직
     void FacePlayer(float DeltaTime);
-
-    // 플레이어의 움직임에 맞춰 심리전 이동
-    void PsychologicalMove(float DeltaTime);
 
     // 상태를 주기적으로 업데이트하는 함수
     void UpdateMovementState();
@@ -90,6 +88,9 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
     float SprintSpeed = 500.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
+    float StrafeSpeed = 400.0f; // 좌우 이동 속도
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
     float RotationSpeed = 5.0f;

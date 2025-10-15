@@ -11,7 +11,7 @@ AWorld2AIBossCharacter::AWorld2AIBossCharacter()
     GetCharacterMovement()->bOrientRotationToMovement = false;
 
     // 초기 상태 설정
-    CurrentAIState = EBossAIState::Repositioning;
+    CurrentAIState = EBossAIState::Watching;
 }
 
 void AWorld2AIBossCharacter::BeginPlay()
@@ -20,8 +20,8 @@ void AWorld2AIBossCharacter::BeginPlay()
 
     PlayerCharacter = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 
-    // 게임 시작 시, 첫 의사결정을 내리도록 타이머를 설정합니다.
-    GetWorldTimerManager().SetTimer(DecisionTimer, this, &AWorld2AIBossCharacter::MakeDecision, DecisionInterval, true, 0.5f);
+    // 첫 의사결정을 0.5초 후에 시작하고, 그 이후는 MakeDecision 함수 내에서 타이머를 관리합니다.
+    GetWorldTimerManager().SetTimer(DecisionTimer, this, &AWorld2AIBossCharacter::MakeDecision, 0.5f, false);
 }
 
 void AWorld2AIBossCharacter::Tick(float DeltaTime)
@@ -48,73 +48,104 @@ void AWorld2AIBossCharacter::FacePlayer(float DeltaTime)
 
 void AWorld2AIBossCharacter::MakeDecision()
 {
-    if (CurrentAIState == EBossAIState::Attacking || CurrentAIState == EBossAIState::Retreating) return;
+    // 공격 중이거나 후퇴 중일 때는 새로운 결정을 내리지 않습니다.
+    if (CurrentAIState == EBossAIState::Attacking || CurrentAIState == EBossAIState::BackingOff) return;
 
     float Distance = GetDistanceTo(PlayerCharacter);
 
-    // 플레이어가 공격 범위 밖에 있고, 현재 재배치 중이라면
-    if (Distance > AttackRange && CurrentAIState == EBossAIState::Repositioning)
+    // 1. 플레이어가 공격 범위 안에 있는가?
+    if (Distance <= AttackRange)
     {
-        // 70% 확률로 공격을 위해 접근하기로 결정합니다.
-        if (FMath::RandRange(0, 100) < 70)
+        // 60% 확률로 공격, 40% 확률로 거리를 벌립니다. (바로 공격하지 않고 심리전)
+        if (FMath::RandRange(0, 100) < 60)
         {
-            CurrentAIState = EBossAIState::ClosingDistance;
+            CurrentAIState = EBossAIState::Attacking;
         }
-        // 나머지 30%는 계속 재배치(선회) 상태를 유지합니다.
+        else
+        {
+            CurrentAIState = EBossAIState::BackingOff;
+        }
     }
+    // 2. 플레이어가 공격 범위 밖에 있는가?
+    else if (Distance > RepositionDistance)
+    {
+        // 너무 멀다면, 80% 확률로 접근하고 20% 확률로 지켜봅니다.
+        if (FMath::RandRange(0, 100) < 80)
+        {
+            CurrentAIState = EBossAIState::Approaching;
+        }
+        else
+        {
+            CurrentAIState = EBossAIState::Watching;
+        }
+    }
+    // 3. 심리전을 벌이는 "중간" 거리인가?
+    else
+    {
+        // 60% 확률로 선회하고, 25% 확률로 지켜보고, 15% 확률로 접근합니다.
+        int32 RandVal = FMath::RandRange(0, 100);
+        if (RandVal < 60)
+        {
+            CurrentAIState = EBossAIState::Circling;
+            // 선회 방향을 무작위로 결정합니다. (좌우 버벅임 방지)
+            CirclingDirection = FMath::RandBool() ? 1.0f : -1.0f;
+        }
+        else if (RandVal < 85)
+        {
+            CurrentAIState = EBossAIState::Watching;
+        }
+        else
+        {
+            CurrentAIState = EBossAIState::Approaching;
+        }
+    }
+
+    // 결정된 상태를 실행하고, 다음 결정을 위한 타이머를 다시 설정합니다.
+    GetWorldTimerManager().SetTimer(DecisionTimer, this, &AWorld2AIBossCharacter::MakeDecision, DecisionInterval, false);
 }
 
 void AWorld2AIBossCharacter::ExecuteState(float DeltaTime)
 {
-    float Distance = GetDistanceTo(PlayerCharacter);
+    FVector MoveDirection = FVector::ZeroVector;
 
     switch (CurrentAIState)
     {
-        case EBossAIState::Repositioning:
-            GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-            // 재배치 거리(RepositionDistance)를 기준으로 거리를 조절하며 선회합니다.
-            {
-                FVector DirectionToTarget = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-                FVector StrafeDirection = FVector::CrossProduct(DirectionToTarget, FVector::UpVector) * CirclingDirection;
-                FVector DistanceControl = (Distance > RepositionDistance) ? DirectionToTarget : -DirectionToTarget;
-                AddMovementInput(StrafeDirection + DistanceControl * 0.5f);
-            }
+        case EBossAIState::Watching:
+            GetCharacterMovement()->MaxWalkSpeed = 0; // 제자리에서 관망
             break;
 
-        case EBossAIState::ClosingDistance:
-            GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
-            // 플레이어를 향해 돌진합니다.
-            AddMovementInput(GetActorForwardVector());
-            // 공격 범위에 들어오면, 공격 상태로 전환합니다.
-            if (Distance <= AttackRange)
+        case EBossAIState::Circling:
+            GetCharacterMovement()->MaxWalkSpeed = StrafeSpeed; // 선회 속도 적용
+            MoveDirection = GetActorRightVector() * CirclingDirection;
+            AddMovementInput(MoveDirection);
+            break;
+
+        case EBossAIState::Approaching:
+            GetCharacterMovement()->MaxWalkSpeed = SprintSpeed; // 돌진 속도 적용
+            MoveDirection = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+            AddMovementInput(MoveDirection);
+            break;
+
+        case EBossAIState::BackingOff:
+            GetCharacterMovement()->MaxWalkSpeed = WalkSpeed; // 뒷걸음질 속도 적용
+            MoveDirection = (GetActorLocation() - PlayerCharacter->GetActorLocation()).GetSafeNormal();
+            AddMovementInput(MoveDirection);
+            // 일정 시간 후퇴 후, 반드시 관망 상태로 전환하여 다시 생각하게 만듭니다.
+            if (!GetWorldTimerManager().IsTimerActive(DecisionTimer))
             {
-                CurrentAIState = EBossAIState::Attacking;
-                // (임시) 공격 몽타주가 없으므로, 1초 후 후퇴 상태로 전환합니다.
-                FTimerHandle TempAttackTimer;
-                GetWorldTimerManager().SetTimer(TempAttackTimer, [this](){
-                    CurrentAIState = EBossAIState::Retreating;
-                }, 1.0f, false);
+                 GetWorldTimerManager().SetTimer(DecisionTimer, [this](){
+                    CurrentAIState = EBossAIState::Watching;
+                    MakeDecision(); // 관망 후 바로 다음 결정
+                }, RetreatDuration, false);
             }
             break;
 
         case EBossAIState::Attacking:
-            // 공격 중에는 움직임을 멈춥니다.
             GetCharacterMovement()->StopMovementImmediately();
-            break;
-
-        case EBossAIState::Retreating:
-            GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-            // 플레이어에게서 멀어집니다.
-            AddMovementInput(GetActorForwardVector() * -1.0f);
-            // 일정 시간 후퇴했으면, 다시 재배치 상태로 돌아갑니다.
-            {
-                FTimerHandle TempRetreatTimer;
-                GetWorldTimerManager().SetTimer(TempRetreatTimer, [this](){
-                    CurrentAIState = EBossAIState::Repositioning;
-                    // 다음 선회 방향을 무작위로 다시 결정합니다.
-                    CirclingDirection = FMath::RandBool() ? 1.0f : -1.0f;
-                }, RetreatDuration, false);
-            }
+            // TODO: 여기에 실제 공격 로직 (애니메이션 몽타주 재생 등)을 추가해야 합니다.
+            
+            // 임시: 공격 후 바로 후퇴하도록 설정
+            CurrentAIState = EBossAIState::BackingOff;
             break;
     }
 }
