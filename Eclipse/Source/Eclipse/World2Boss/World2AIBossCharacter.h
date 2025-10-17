@@ -12,6 +12,7 @@ enum class EBossAIState : uint8
     Circling            UMETA(DisplayName = "Circling"),          // 선회하며 각 재기
     Approaching         UMETA(DisplayName = "Approaching"),       // 접근
     BackingOff          UMETA(DisplayName = "BackingOff"),        // 거리 벌리기
+    SideDashing         UMETA(DisplayName = "SideDashing"),       // 측면 대쉬
     Attacking           UMETA(DisplayName = "Attacking")           // 공격
 };
 
@@ -59,6 +60,12 @@ protected:
     // 보스가 선회할 방향 (-1 or 1)
     float CirclingDirection;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
+    float ChargeSpeed = 1500.0f; // 돌진 속도
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
+    float ChargeDuration = 0.7f; // 돌진 지속 시간
+
     // 플레이어 캐릭터 참조
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
     APlayerCharacter* PlayerCharacter;
@@ -91,6 +98,24 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
     float StrafeSpeed = 400.0f; // 좌우 이동 속도
+
+protected:
+    // 돌진 상태를 제어하기 위한 변수들
+    bool bIsCharging;
+    FTimerHandle ChargeTimer;
+    void OnChargeEnd();
+
+    // 측면 대쉬 상태를 제어하기 위한 변수들
+    bool bIsSideDashing;
+    FTimerHandle SideDashTimer;
+    void OnSideDashEnd();
+
+protected:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
+    float SideDashSpeed = 1200.0f; // 측면 대쉬 속도
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
+    float SideDashDuration = 0.4f; // 측면 대쉬 지속 시간
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
     float RotationSpeed = 5.0f;

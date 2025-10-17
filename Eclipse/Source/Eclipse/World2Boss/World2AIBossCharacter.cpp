@@ -12,6 +12,8 @@ AWorld2AIBossCharacter::AWorld2AIBossCharacter()
 
     // 초기 상태 설정
     CurrentAIState = EBossAIState::Watching;
+    bIsCharging = false;
+    bIsSideDashing = false;
 }
 
 void AWorld2AIBossCharacter::BeginPlay()
@@ -48,15 +50,15 @@ void AWorld2AIBossCharacter::FacePlayer(float DeltaTime)
 
 void AWorld2AIBossCharacter::MakeDecision()
 {
-    // 공격 중이거나 후퇴 중일 때는 새로운 결정을 내리지 않습니다.
-    if (CurrentAIState == EBossAIState::Attacking || CurrentAIState == EBossAIState::BackingOff) return;
+    // 공격, 후퇴, 돌진, 측면 대쉬 중일 때는 새로운 결정을 내리지 않습니다.
+    if (CurrentAIState == EBossAIState::Attacking || CurrentAIState == EBossAIState::BackingOff || bIsCharging || bIsSideDashing) return;
 
     float Distance = GetDistanceTo(PlayerCharacter);
 
     // 1. 플레이어가 공격 범위 안에 있는가?
     if (Distance <= AttackRange)
     {
-        // 60% 확률로 공격, 40% 확률로 거리를 벌립니다. (바로 공격하지 않고 심리전)
+        // 60% 확률로 공격, 40% 확률로 거리를 벌립니다.
         if (FMath::RandRange(0, 100) < 60)
         {
             CurrentAIState = EBossAIState::Attacking;
@@ -69,7 +71,7 @@ void AWorld2AIBossCharacter::MakeDecision()
     // 2. 플레이어가 공격 범위 밖에 있는가?
     else if (Distance > RepositionDistance)
     {
-        // 너무 멀다면, 80% 확률로 접근하고 20% 확률로 지켜봅니다.
+        // 너무 멀다면, 80% 확률로 돌진하고 20% 확률로 지켜봅니다.
         if (FMath::RandRange(0, 100) < 80)
         {
             CurrentAIState = EBossAIState::Approaching;
@@ -82,21 +84,24 @@ void AWorld2AIBossCharacter::MakeDecision()
     // 3. 심리전을 벌이는 "중간" 거리인가?
     else
     {
-        // 60% 확률로 선회하고, 25% 확률로 지켜보고, 15% 확률로 접근합니다.
+        // 50% 선회, 20% 관망, 15% 접근, 15% 측면 대쉬
         int32 RandVal = FMath::RandRange(0, 100);
-        if (RandVal < 60)
+        if (RandVal < 50)
         {
             CurrentAIState = EBossAIState::Circling;
-            // 선회 방향을 무작위로 결정합니다. (좌우 버벅임 방지)
             CirclingDirection = FMath::RandBool() ? 1.0f : -1.0f;
         }
-        else if (RandVal < 85)
+        else if (RandVal < 70)
         {
             CurrentAIState = EBossAIState::Watching;
         }
-        else
+        else if (RandVal < 85)
         {
             CurrentAIState = EBossAIState::Approaching;
+        }
+        else
+        {
+            CurrentAIState = EBossAIState::SideDashing;
         }
     }
 
@@ -121,7 +126,15 @@ void AWorld2AIBossCharacter::ExecuteState(float DeltaTime)
             break;
 
         case EBossAIState::Approaching:
-            GetCharacterMovement()->MaxWalkSpeed = SprintSpeed; // 돌진 속도 적용
+            // 아직 돌진 중이 아니라면 돌진을 시작합니다.
+            if (!bIsCharging)
+            {
+                bIsCharging = true;
+                GetCharacterMovement()->MaxWalkSpeed = ChargeSpeed; // 폭발적인 돌진 속도 적용
+                // 일정 시간 후에 돌진을 멈추도록 타이머를 설정합니다.
+                GetWorldTimerManager().SetTimer(ChargeTimer, this, &AWorld2AIBossCharacter::OnChargeEnd, ChargeDuration, false);
+            }
+            // 돌진 방향으로 계속 이동합니다.
             MoveDirection = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
             AddMovementInput(MoveDirection);
             break;
@@ -147,6 +160,19 @@ void AWorld2AIBossCharacter::ExecuteState(float DeltaTime)
             // 임시: 공격 후 바로 후퇴하도록 설정
             CurrentAIState = EBossAIState::BackingOff;
             break;
+
+        case EBossAIState::SideDashing:
+            if (!bIsSideDashing)
+            {
+                bIsSideDashing = true;
+                GetCharacterMovement()->MaxWalkSpeed = SideDashSpeed;
+                // 대쉬 방향을 무작위로 결정합니다.
+                CirclingDirection = FMath::RandBool() ? 1.0f : -1.0f;
+                GetWorldTimerManager().SetTimer(SideDashTimer, this, &AWorld2AIBossCharacter::OnSideDashEnd, SideDashDuration, false);
+            }
+            MoveDirection = GetActorRightVector() * CirclingDirection;
+            AddMovementInput(MoveDirection);
+            break;
     }
 }
 
@@ -158,4 +184,16 @@ float AWorld2AIBossCharacter::TakeDamage(float DamageAmount, FDamageEvent const&
         UE_LOG(LogTemp, Warning, TEXT("HIT! World2AIBossCharacter '%s' took %.2f damage from %s."), *GetName(), ActualDamage, *DamageCauser->GetName());
     }
     return ActualDamage;
+}
+
+void AWorld2AIBossCharacter::OnChargeEnd()
+{
+    bIsCharging = false;
+    CurrentAIState = EBossAIState::Watching; // 돌진이 끝나면 다시 관망 상태로 돌아가 다음 행동을 결정합니다.
+}
+
+void AWorld2AIBossCharacter::OnSideDashEnd()
+{
+    bIsSideDashing = false;
+    CurrentAIState = EBossAIState::Watching; // 대쉬가 끝나면 다시 관망 상태로 돌아갑니다.
 }
