@@ -43,6 +43,7 @@ private:
     // 충돌 및 상태 제어 함수
     UFUNCTION(BlueprintCallable)
     void ActivateWeaponCollision();
+
     UFUNCTION(BlueprintCallable)
     void DeactivateWeaponCollision();
     UFUNCTION()
@@ -117,5 +118,8 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Combat")
     TArray<class UAnimMontage*> AttackMontages;
     UPROPERTY(VisibleDefaultsOnly, Category = "AI|Combat")
-    class UBoxComponent* WeaponCollisionBox;
+    class UBoxComponent* RightWeaponCollisionBox;
+
+    UPROPERTY(VisibleDefaultsOnly, Category = "AI|Combat")
+    class UBoxComponent* LeftWeaponCollisionBox;
 };

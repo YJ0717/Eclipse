@@ -18,12 +18,21 @@ AWorld2AIBossCharacter::AWorld2AIBossCharacter()
     bIsComboAttacking = false;
     CurrentComboIndex = 0;
 
-    WeaponCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("WeaponCollisionBox"));
-    WeaponCollisionBox->SetupAttachment(GetMesh(), FName("hand_rSocket"));
-    WeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    WeaponCollisionBox->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
-    WeaponCollisionBox->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-    WeaponCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
+    // 오른손 무기 충돌 박스를 생성하고 오른손 무기 소켓에 붙입니다.
+    RightWeaponCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("RightWeaponCollisionBox"));
+    RightWeaponCollisionBox->SetupAttachment(GetMesh(), FName("RightWeaponSocket"));
+    RightWeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    RightWeaponCollisionBox->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
+    RightWeaponCollisionBox->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+    RightWeaponCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
+
+    // 왼손 무기 충돌 박스를 생성하고 왼손 무기 소켓에 붙입니다.
+    LeftWeaponCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("LeftWeaponCollisionBox"));
+    LeftWeaponCollisionBox->SetupAttachment(GetMesh(), FName("LeftWeaponSocket"));
+    LeftWeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    LeftWeaponCollisionBox->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
+    LeftWeaponCollisionBox->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+    LeftWeaponCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
 }
 
 void AWorld2AIBossCharacter::BeginPlay()
@@ -32,9 +41,14 @@ void AWorld2AIBossCharacter::BeginPlay()
 
     PlayerCharacter = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 
-    if (WeaponCollisionBox)
+    // 양손 무기 충돌 박스의 오버랩 이벤트에 함수를 바인딩합니다.
+    if (RightWeaponCollisionBox)
     {
-        WeaponCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &AWorld2AIBossCharacter::OnWeaponOverlap);
+        RightWeaponCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &AWorld2AIBossCharacter::OnWeaponOverlap);
+    }
+    if (LeftWeaponCollisionBox)
+    {
+        LeftWeaponCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &AWorld2AIBossCharacter::OnWeaponOverlap);
     }
 
     GetWorldTimerManager().SetTimer(DecisionTimer, this, &AWorld2AIBossCharacter::MakeDecision, 0.5f, false);
@@ -306,18 +320,27 @@ void AWorld2AIBossCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bI
 
 void AWorld2AIBossCharacter::ActivateWeaponCollision()
 {
-    if (WeaponCollisionBox)
+    HitActors.Empty();
+
+    if (LeftWeaponCollisionBox)
     {
-        HitActors.Empty();
-        WeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        LeftWeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    }
+    if (RightWeaponCollisionBox)
+    {
+        RightWeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     }
 }
 
 void AWorld2AIBossCharacter::DeactivateWeaponCollision()
 {
-    if (WeaponCollisionBox)
+    if (RightWeaponCollisionBox)
     {
-        WeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        RightWeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    }
+    if (LeftWeaponCollisionBox)
+    {
+        LeftWeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     }
 }
 
