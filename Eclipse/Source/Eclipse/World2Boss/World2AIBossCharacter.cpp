@@ -44,6 +44,12 @@ void AWorld2AIBossCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    // 공격 중에는 회전 및 이동 등 모든 AI 로직을 정지시켜 제자리에 고정합니다.
+    if (bIsComboAttacking)
+    {
+        return;
+    }
+
     if (GEngine)
     {
         GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Yellow, FString::Printf(TEXT("Current State: %s"), *UEnum::GetValueAsString(CurrentAIState)));
@@ -71,11 +77,19 @@ void AWorld2AIBossCharacter::MakeDecision()
 
     float Distance = GetDistanceTo(PlayerCharacter);
 
+    // 1. 플레이어가 공격 범위 안에 있는가?
     if (Distance <= AttackRange)
     {
-        if (FMath::RandRange(0, 100) < 60)
+        // 80% 확률로 공격, 15% 확률로 선회, 5% 확률로만 거리를 벌립니다.
+        int32 RandVal = FMath::RandRange(0, 100);
+        if (RandVal < 80)
         {
             CurrentAIState = EBossAIState::Attacking;
+        }
+        else if (RandVal < 95)
+        {
+            CurrentAIState = EBossAIState::Circling;
+            CirclingDirection = FMath::RandBool() ? 1.0f : -1.0f;
         }
         else
         {
@@ -120,66 +134,69 @@ void AWorld2AIBossCharacter::MakeDecision()
 
 void AWorld2AIBossCharacter::ExecuteState(float DeltaTime)
 {
-    FVector MoveDirection = FVector::ZeroVector;
-
-    switch (CurrentAIState)
+    // 공격 또는 쿨다운 상태일 때는 모든 움직임을 멈추고 아무것도 하지 않습니다.
+    if (CurrentAIState == EBossAIState::Attacking || CurrentAIState == EBossAIState::AttackCooldown)
     {
-        case EBossAIState::Watching:
-            GetCharacterMovement()->MaxWalkSpeed = 0;
-            break;
+        GetCharacterMovement()->StopMovementImmediately();
+        
+        // Attacking 상태이고, 아직 공격을 시작하지 않았다면 공격을 시작합니다.
+        if (CurrentAIState == EBossAIState::Attacking && !bIsComboAttacking)
+        {
+            PerformAttack();
+        }
+    }
+    else
+    {
+        // 공격/쿨다운이 아닌 다른 상태일 때만 움직임 로직을 실행합니다.
+        FVector MoveDirection = FVector::ZeroVector;
+        switch (CurrentAIState)
+        {
+            case EBossAIState::Watching:
+                GetCharacterMovement()->MaxWalkSpeed = 0;
+                break;
 
-        case EBossAIState::Circling:
-            GetCharacterMovement()->MaxWalkSpeed = StrafeSpeed;
-            MoveDirection = GetActorRightVector() * CirclingDirection;
-            AddMovementInput(MoveDirection);
-            break;
+            case EBossAIState::Circling:
+                GetCharacterMovement()->MaxWalkSpeed = StrafeSpeed;
+                MoveDirection = GetActorRightVector() * CirclingDirection;
+                AddMovementInput(MoveDirection);
+                break;
 
-        case EBossAIState::Approaching:
-            if (!bIsCharging)
-            {
-                bIsCharging = true;
-                GetCharacterMovement()->MaxWalkSpeed = ChargeSpeed;
-                GetWorldTimerManager().SetTimer(ChargeTimer, this, &AWorld2AIBossCharacter::OnChargeEnd, ChargeDuration, false);
-            }
-            MoveDirection = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-            AddMovementInput(MoveDirection);
-            break;
+            case EBossAIState::Approaching:
+                if (!bIsCharging)
+                {
+                    bIsCharging = true;
+                    GetCharacterMovement()->MaxWalkSpeed = ChargeSpeed;
+                    GetWorldTimerManager().SetTimer(ChargeTimer, this, &AWorld2AIBossCharacter::OnChargeEnd, ChargeDuration, false);
+                }
+                MoveDirection = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+                AddMovementInput(MoveDirection);
+                break;
 
-        case EBossAIState::BackingOff:
-            GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-            MoveDirection = (GetActorLocation() - PlayerCharacter->GetActorLocation()).GetSafeNormal();
-            AddMovementInput(MoveDirection);
-            if (!GetWorldTimerManager().IsTimerActive(DecisionTimer))
-            {
-                 GetWorldTimerManager().SetTimer(DecisionTimer, [this](){
-                    CurrentAIState = EBossAIState::Watching;
-                    MakeDecision();
-                }, RetreatDuration, false);
-            }
-            break;
+            case EBossAIState::BackingOff:
+                GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+                MoveDirection = (GetActorLocation() - PlayerCharacter->GetActorLocation()).GetSafeNormal();
+                AddMovementInput(MoveDirection);
+                if (!GetWorldTimerManager().IsTimerActive(DecisionTimer))
+                {
+                     GetWorldTimerManager().SetTimer(DecisionTimer, [this](){
+                        CurrentAIState = EBossAIState::Watching;
+                        MakeDecision();
+                    }, RetreatDuration, false);
+                }
+                break;
 
-        case EBossAIState::Attacking:
-            if (!bIsComboAttacking)
-            {
-                PerformAttack();
-            }
-            break;
-
-        case EBossAIState::AttackCooldown:
-            GetCharacterMovement()->StopMovementImmediately();
-            break;
-
-        case EBossAIState::SideDashing:
-            if (!bIsSideDashing)
-            {
-                bIsSideDashing = true;
-                GetCharacterMovement()->MaxWalkSpeed = SideDashSpeed;
-                CirclingDirection = FMath::RandBool() ? 1.0f : -1.0f;
-                GetWorldTimerManager().SetTimer(SideDashTimer, this, &AWorld2AIBossCharacter::OnSideDashEnd, SideDashDuration, false);
-            }
-            MoveDirection = GetActorRightVector() * CirclingDirection;
-            AddMovementInput(MoveDirection);
-            break;
+            case EBossAIState::SideDashing:
+                if (!bIsSideDashing)
+                {
+                    bIsSideDashing = true;
+                    GetCharacterMovement()->MaxWalkSpeed = SideDashSpeed;
+                    CirclingDirection = FMath::RandBool() ? 1.0f : -1.0f;
+                    GetWorldTimerManager().SetTimer(SideDashTimer, this, &AWorld2AIBossCharacter::OnSideDashEnd, SideDashDuration, false);
+                }
+                MoveDirection = GetActorRightVector() * CirclingDirection;
+                AddMovementInput(MoveDirection);
+                break;
+        }
     }
 }
 
@@ -210,26 +227,35 @@ void AWorld2AIBossCharacter::PerformAttack()
     if (AttackMontages.Num() == 0) return;
 
     bIsComboAttacking = true;
-    CurrentComboIndex = 0;
+    // 콤보의 시작점을 무작위로 결정합니다. (0: 어택1, 1: 어택2, 2: 어택3)
+    CurrentComboIndex = FMath::RandRange(0, AttackMontages.Num() - 1);
 
-    UAnimMontage* FirstAttack = AttackMontages[CurrentComboIndex];
-    if (FirstAttack)
+    UAnimMontage* AttackToPlay = AttackMontages[CurrentComboIndex];
+    if (AttackToPlay)
     {
-        PlayAnimMontage(FirstAttack);
+        PlayAnimMontage(AttackToPlay);
         FOnMontageEnded MontageEndedDelegate;
         MontageEndedDelegate.BindUObject(this, &AWorld2AIBossCharacter::OnAttackMontageEnded);
-        GetMesh()->GetAnimInstance()->Montage_SetEndDelegate(MontageEndedDelegate, FirstAttack);
+        GetMesh()->GetAnimInstance()->Montage_SetEndDelegate(MontageEndedDelegate, AttackToPlay);
     }
 }
 
 void AWorld2AIBossCharacter::CheckForNextCombo()
 {
-    UE_LOG(LogTemp, Log, TEXT("CheckForNextCombo called. bCanDoNextCombo: %s, bIsComboAttacking: %s"), bCanDoNextCombo ? TEXT("true") : TEXT("false"), bIsComboAttacking ? TEXT("true") : TEXT("false"));
-
     if (!bCanDoNextCombo || !bIsComboAttacking) return;
 
-    bCanDoNextCombo = false; // 콤보 결정 기회는 한 번 뿐
+    bCanDoNextCombo = false;
 
+    // 콤보를 이어가기 전에, 플레이어가 여전히 공격 범위 내에 있는지 확인합니다.
+    const float DistanceToPlayer = GetDistanceTo(PlayerCharacter);
+    if (DistanceToPlayer > AttackRange + 50.0f) // 약간의 허용 오차를 줍니다.
+    {
+        UE_LOG(LogTemp, Log, TEXT("Player is out of range. Stopping combo."));
+        OnAttackMontageEnded(nullptr, true);
+        return;
+    }
+
+    // 콤보 확률에 따라 다음 공격을 결정합니다.
     if (FMath::RandRange(0, 100) < ComboChance)
     {
         CurrentComboIndex++;
@@ -252,7 +278,6 @@ void AWorld2AIBossCharacter::CheckForNextCombo()
     }
     else
     {
-        // 콤보를 이어가지 않기로 결정하면 공격 종료 처리를 직접 호출합니다.
         OnAttackMontageEnded(nullptr, true);
     }
 }
