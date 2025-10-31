@@ -16,9 +16,39 @@ class UAnimMontage;
 class UBoxComponent;
 class UCurveFloat;
 class UTimelineComponent;
-
+class ASg1Monster2;
 class ASg1Monster1;
 class ASg1BossCharacter;
+
+
+UENUM(BlueprintType)
+enum class ETraitType : uint8
+{
+	AttackDamageUp     UMETA(DisplayName = "BaseAttackUp"),
+	SkillBuff    UMETA(DisplayName = "SkillAttackUp"),
+};
+
+USTRUCT(BlueprintType)
+struct FTraitData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FText TraitName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FText TraitDescription;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ETraitType TraitType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Value;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UTexture2D* Icon;
+};
+
 
 UCLASS()
 class ECLIPSE_API APlayerCharacter : public ACharacter
@@ -28,6 +58,20 @@ class ECLIPSE_API APlayerCharacter : public ACharacter
 public:
 	APlayerCharacter();
 	
+	//로그라이크 특성용
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traits")
+	TArray<FTraitData> AllTraits;
+
+	UFUNCTION(BlueprintCallable, Category = "Traits")
+	void InitializeTraits();
+
+	UFUNCTION(BlueprintCallable, Category = "Traits")
+	TArray<FTraitData> GetRandomTraits(int32 Count);
+
+	UFUNCTION(BlueprintCallable, Category = "Traits")
+	void ApplyTrait(const FTraitData& Trait);
+
+
 	//힐 관련 이미지용 함수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float MaxEst;
@@ -39,7 +83,7 @@ public:
 	TArray<UAnimMontage*> SkillMontages;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
-	float SkillAttack;
+	float SkillAttack = 40.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
 	TArray<UAnimMontage*> RunAttackMontages;

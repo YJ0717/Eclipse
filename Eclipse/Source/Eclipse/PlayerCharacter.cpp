@@ -13,11 +13,14 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Sg1Monster1.h"
+#include "Sg1Monster2.h"
 #include "Sg1BossCharacter.h"
 #include "World2Boss/World2AIBossCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Engine/Engine.h"
 #include "RiposteDamageType.h"
+
+
 // DestructibleWall 헤더 추가
 #include "Destructible/DestructibleWall.h"
 #include "GeometryCollection/GeometryCollectionComponent.h"
@@ -126,11 +129,8 @@ void APlayerCharacter::BeginPlay()
     {
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Initial Stamina: %.2f / %.2f"), CurrentStamina, MaxStamina));
     }
+	
 }
-
-// ... 기존 코드 생략 ...
-
-// 새로 추가: OnWeaponHit 함수 구현
 #include "Destructible/PillarDestructible.h"
 
 // 커스텀 채널 정의 (DefaultEngine.ini 기반)
@@ -693,6 +693,20 @@ void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent,
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
 		}
 	}
+
+	ASg1Monster2* Monster2 = Cast<ASg1Monster2>(OtherActor);
+	if (Monster2 && !HitActors.Contains(Monster2))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Weapon Hit Monster2: %s"), *Monster2->GetName());
+		UGameplayStatics::ApplyDamage(Monster2, AttackDamage, GetController(), this, UDamageType::StaticClass());
+		HitActors.Add(Monster2);
+
+		if (ImpactEffect)
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
+		}
+	}
+
 	ASg1BossCharacter* Boss = Cast<ASg1BossCharacter>(OtherActor);
 	if (Boss)
 	{
@@ -810,4 +824,37 @@ void APlayerCharacter::OnHealMontageEnded(UAnimMontage* Montage, bool bInterrupt
 	{
 		bIsHealing = false;
 	}
+}
+
+void APlayerCharacter::InitializeTraits()//현재 쓰지는 않지만 나중에 죽고 정렬시킬때 쓸수도있어서 남겨둠
+{
+	AllTraits.Empty();
+
+	
+}
+
+TArray<FTraitData> APlayerCharacter::GetRandomTraits(int32 Count)// 현재 쓰지는 않지만 특성 여러개 되면 사용예정
+{
+	TArray<FTraitData> Result;
+	TArray<int32> UsedIndices;
+
+	while (Result.Num() < Count && Result.Num() < AllTraits.Num())
+	{
+		int32 RandIndex = FMath::RandRange(0, AllTraits.Num() - 1);
+		if (!UsedIndices.Contains(RandIndex))
+		{
+			Result.Add(AllTraits[RandIndex]);
+			UsedIndices.Add(RandIndex);
+		}
+	}
+
+	return Result;
+}
+
+void APlayerCharacter::ApplyTrait(const FTraitData& Trait)
+{
+	if (Trait.TraitName.EqualTo(FText::FromString("BaseAttackUp")))
+		AttackDamage += Trait.Value;
+	else if (Trait.TraitName.EqualTo(FText::FromString("SkillPowerUp")))
+		SkillAttack *= Trait.Value;
 }
