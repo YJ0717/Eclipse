@@ -19,11 +19,15 @@
 #include "Components/BoxComponent.h"
 #include "Engine/Engine.h"
 #include "RiposteDamageType.h"
+#include "EclipseGameInstance.h" // 게임 인스턴스 헤더
+#include "EclipseSaveGame.h" // 세이브 시스템 헤더
+#include "SaveGameData.h" // 세이브 데이터 헤더
 
 
 // DestructibleWall 헤더 추가
 #include "Destructible/DestructibleWall.h"
 #include "GeometryCollection/GeometryCollectionComponent.h"
+#include "Destructible/PillarDestructible.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -125,14 +129,19 @@ void APlayerCharacter::BeginPlay()
 	WeaponCollisionBox->OnComponentHit.AddDynamic(this, &APlayerCharacter::OnWeaponHit);
 
     // 화면에 초기 스태미너 값 출력
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Initial Stamina: %.2f / %.2f"), CurrentStamina, MaxStamina));
-    }
-	
-}
-#include "Destructible/PillarDestructible.h"
-
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Initial Stamina: %.2f / %.2f"), CurrentStamina, MaxStamina));
+        }
+    
+        // --- 게임 로드 로직 추가 ---
+        UEclipseGameInstance* GameInstance = Cast<UEclipseGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+        if (GameInstance && GameInstance->bShouldLoadGame)
+        {
+            LoadPlayerState();
+                    GameInstance->bShouldLoadGame = false; // 한 번 로드 후 플래그 리셋
+                }
+            }
 // 커스텀 채널 정의 (DefaultEngine.ini 기반)
 #define ECC_OutDestruction ECollisionChannel::ECC_GameTraceChannel2
 #define ECC_InnerDestruction ECollisionChannel::ECC_GameTraceChannel3
@@ -180,6 +189,9 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Parry);
 		EnhancedInputComponent->BindAction(SkillAction, ETriggerEvent::Started, this, &APlayerCharacter::Skill);
 		EnhancedInputComponent->BindAction(HealAction, ETriggerEvent::Started, this, &APlayerCharacter::Heal);
+
+		// 세이브 입력 바인딩
+		EnhancedInputComponent->BindAction(SaveAction, ETriggerEvent::Started, this, &APlayerCharacter::SavePlayerState);
 	}
 }
 
@@ -857,4 +869,39 @@ void APlayerCharacter::ApplyTrait(const FTraitData& Trait)
 		AttackDamage += Trait.Value;
 	else if (Trait.TraitName.EqualTo(FText::FromString("SkillPowerUp")))
 		SkillAttack *= Trait.Value;
+}
+
+void APlayerCharacter::SavePlayerState()
+{
+    // "MySaveSlot"이라는 이름으로 현재 플레이어의 위치와 HP를 저장합니다.
+    UEclipseSaveGame::SaveGame("MySaveSlot", 0, TEXT("Player1"), GetActorLocation(), CurrentHealth);
+
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Game Saved! Location: %s, HP: %.1f"), *GetActorLocation().ToString(), CurrentHealth));
+    }
+}
+
+void APlayerCharacter::LoadPlayerState()
+{
+    // "MySaveSlot"에 저장된 게임 데이터를 불러옵니다.
+    USaveGameData* LoadedGame = UEclipseSaveGame::LoadGame("MySaveSlot", 0);
+    if (LoadedGame)
+    {
+        // 불러온 위치와 HP로 플레이어를 설정합니다.
+        SetActorLocation(LoadedGame->PlayerLocation);
+        CurrentHealth = LoadedGame->PlayerHealth;
+
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("Game Loaded! Player moved to: %s, HP set to: %.1f"), *LoadedGame->PlayerLocation.ToString(), CurrentHealth));
+        }
+    }
+    else
+    { 
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("No Save Game found!"));
+        }
+    }
 }
