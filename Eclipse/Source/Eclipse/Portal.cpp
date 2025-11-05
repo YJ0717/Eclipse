@@ -5,6 +5,8 @@
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
+#include "PlayerCharacter.h"
+#include "EclipseGameInstance.h"
 
 
 // Sets default values
@@ -29,11 +31,14 @@ void APortal::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherA
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
     bool bFromSweep, const FHitResult& SweepResult)
 {
-    if (ACharacter* Player = Cast<ACharacter>(OtherActor))
+    if (APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor))
     {
         if (!LevelToLoad.IsNone())
         {
-            // 다음 맵으로 이동
+            if (UEclipseGameInstance* GameInstance = Cast<UEclipseGameInstance>(GetGameInstance())) {
+                GameInstance->PlayerHealthOnTravel = Player->CurrentHealth;
+            }
+
             UGameplayStatics::OpenLevel(this, LevelToLoad);
         }
     }

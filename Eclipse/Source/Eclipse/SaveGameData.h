@@ -22,6 +22,11 @@ public:
         // 저장할 플레이어의 HP
         UPROPERTY(VisibleAnywhere, Category = Basic)
         float PlayerHealth;
+
+    // 레벨 이름을 저장할 변수
+    UPROPERTY(BlueprintReadOnly, Category = Basic)
+    FString LevelName;
+    
     // 기본값을 설정하는 생성자
     USaveGameData();
 };

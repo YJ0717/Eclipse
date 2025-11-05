@@ -11,7 +11,7 @@ USaveGameData::USaveGameData()
 }
 
 // 게임 저장 함수 구현
-void UEclipseSaveGame::SaveGame(const FString& SlotName, int32 UserIndex, const FString& PlayerName, const FVector& PlayerLocation, float PlayerHealth)
+void UEclipseSaveGame::SaveGame(const FString& SlotName, int32 UserIndex, const FString& PlayerName, const FVector& PlayerLocation, float PlayerHealth, const FString& LevelName)
 {
     // 새로운 SaveGame 객체를 생성하거나 기존 것을 불러옵니다.
     USaveGameData* SaveGameInstance = Cast<USaveGameData>(UGameplayStatics::CreateSaveGameObject(USaveGameData::StaticClass()));
@@ -21,6 +21,7 @@ void UEclipseSaveGame::SaveGame(const FString& SlotName, int32 UserIndex, const 
         SaveGameInstance->PlayerName = PlayerName;
         SaveGameInstance->PlayerLocation = PlayerLocation;
         SaveGameInstance->PlayerHealth = PlayerHealth; // HP 저장
+        SaveGameInstance->LevelName = LevelName; // 레벨 이름 저장
 
         // 파일로 저장합니다.
         UGameplayStatics::SaveGameToSlot(SaveGameInstance, SlotName, UserIndex);

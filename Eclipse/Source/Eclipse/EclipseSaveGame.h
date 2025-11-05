@@ -15,7 +15,7 @@ class ECLIPSE_API UEclipseSaveGame : public UBlueprintFunctionLibrary
 public:
     // 게임을 저장하는 함수
     UFUNCTION(BlueprintCallable, Category = "SaveGame")
-    static void SaveGame(const FString& SlotName, int32 UserIndex, const FString& PlayerName, const FVector& PlayerLocation, float PlayerHealth);
+    static void SaveGame(const FString& SlotName, int32 UserIndex, const FString& PlayerName, const FVector& PlayerLocation, float PlayerHealth, const FString& LevelName);
 
     // 게임을 불러오는 함수
     UFUNCTION(BlueprintCallable, Category = "SaveGame")

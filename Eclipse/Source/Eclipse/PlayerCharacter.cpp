@@ -136,12 +136,22 @@ void APlayerCharacter::BeginPlay()
     
         // --- 게임 로드 로직 추가 ---
         UEclipseGameInstance* GameInstance = Cast<UEclipseGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-        if (GameInstance && GameInstance->bShouldLoadGame)
+        if (GameInstance)
         {
-            LoadPlayerState();
-                    GameInstance->bShouldLoadGame = false; // 한 번 로드 후 플래그 리셋
-                }
+            // "Continue" 버튼으로 게임을 로드하는 경우
+            if (GameInstance->bShouldLoadGame)
+            {
+                LoadPlayerState();
+                GameInstance->bShouldLoadGame = false; // 한 번 로드 후 플래그 리셋
             }
+            // 포탈을 통해 레벨을 이동한 경우
+            else if (GameInstance->PlayerHealthOnTravel > 0.f)
+            {
+                CurrentHealth = GameInstance->PlayerHealthOnTravel;
+                GameInstance->PlayerHealthOnTravel = 0.f; // 한 번 적용 후 리셋
+            }
+        }
+}
 // 커스텀 채널 정의 (DefaultEngine.ini 기반)
 #define ECC_OutDestruction ECollisionChannel::ECC_GameTraceChannel2
 #define ECC_InnerDestruction ECollisionChannel::ECC_GameTraceChannel3
@@ -874,7 +884,7 @@ void APlayerCharacter::ApplyTrait(const FTraitData& Trait)
 void APlayerCharacter::SavePlayerState()
 {
     // "MySaveSlot"이라는 이름으로 현재 플레이어의 위치와 HP를 저장합니다.
-    UEclipseSaveGame::SaveGame("MySaveSlot", 0, TEXT("Player1"), GetActorLocation(), CurrentHealth);
+    UEclipseSaveGame::SaveGame("MySaveSlot", 0, TEXT("Player1"), GetActorLocation(), CurrentHealth, UGameplayStatics::GetCurrentLevelName(GetWorld()));
 
     if (GEngine)
     {
