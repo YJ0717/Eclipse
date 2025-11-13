@@ -21,11 +21,13 @@ class ASg1Monster1;
 class ASg1BossCharacter;
 
 
+
 UENUM(BlueprintType)
 enum class ETraitType : uint8
 {
 	AttackDamageUp     UMETA(DisplayName = "BaseAttackUp"),
 	SkillBuff    UMETA(DisplayName = "SkillAttackUp"),
+	SkillChange UMETA(DisplayName = "SkillChange")
 };
 
 USTRUCT(BlueprintType)
@@ -48,6 +50,7 @@ struct FTraitData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UTexture2D* Icon;
 };
+
 
 
 UCLASS()
@@ -83,7 +86,11 @@ public:
 	TArray<UAnimMontage*> SkillMontages;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
-	float SkillAttack = 40.0f;
+	float SkillAttack = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
+	float SkillDamageRate = 1.0f;
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
 	TArray<UAnimMontage*> RunAttackMontages;

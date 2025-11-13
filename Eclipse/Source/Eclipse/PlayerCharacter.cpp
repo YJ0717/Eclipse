@@ -875,12 +875,24 @@ TArray<FTraitData> APlayerCharacter::GetRandomTraits(int32 Count)// 현재 쓰�
 
 void APlayerCharacter::ApplyTrait(const FTraitData& Trait)
 {
-	if (Trait.TraitName.EqualTo(FText::FromString("BaseAttackUp")))
+	switch (Trait.TraitType)
+	{
+	case ETraitType::AttackDamageUp:
 		AttackDamage += Trait.Value;
-	else if (Trait.TraitName.EqualTo(FText::FromString("SkillPowerUp")))
-		SkillAttack *= Trait.Value;
-}
+		break;
 
+	case ETraitType::SkillBuff:
+		SkillDamageRate *= Trait.Value;
+		break;
+
+	case ETraitType::SkillChange:
+		SkillAttack = Trait.Value;
+		break;
+
+	default:
+		break;
+	}
+}
 void APlayerCharacter::SavePlayerState()
 {
     // "MySaveSlot"이라는 이름으로 현재 플레이어의 위치와 HP를 저장합니다.
