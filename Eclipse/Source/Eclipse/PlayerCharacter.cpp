@@ -569,7 +569,34 @@ void APlayerCharacter::Tick(float DeltaTime)
 			);
 		}
 	}
+	//3 구르기 공격  보정
+	// 점프/낙하 중엔 적용 X
+	if (GetCharacterMovement()->IsFalling())
+		return;
 
+	// 공격·구르기 중에만 적용
+	if (bIsAttacking || bIsRolling)
+	{
+		FHitResult FloorHit;
+		FVector Start = GetActorLocation();
+		FVector End = Start - FVector(0, 0, 150.f);
+
+		FCollisionQueryParams Params;
+		Params.AddIgnoredActor(this);
+
+		if (GetWorld()->LineTraceSingleByChannel(FloorHit, Start, End, ECC_Visibility, Params))
+		{
+			float FloorDist = (Start.Z - FloorHit.ImpactPoint.Z);
+
+			// 바닥과 거리 5cm 이상이면 붙이기
+			if (FloorDist > 5.f)
+			{
+				FVector TargetLoc = GetActorLocation();
+				TargetLoc.Z -= FMath::Clamp(FloorDist - 5.f, 0.f, 10.f); // 부드럽게 보정
+				SetActorLocation(TargetLoc, true);
+			}
+		}
+	}
 
 
 }
