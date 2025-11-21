@@ -80,6 +80,9 @@ public:
 	// 지금 맞은 부위 저장
 	EAttackPart LastHitPart;
 
+	// 현재 어떤 공격을 수행하고 있는지 저장하는 변수
+	EAttackPart CurrentAttackPart;
+
 	// -- 기본 스탯 --
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sg1Boss|Stats")
 	float MaxHealth = 2000.0f;

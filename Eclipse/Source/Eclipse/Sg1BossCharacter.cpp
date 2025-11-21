@@ -20,29 +20,26 @@ ASg1BossCharacter::ASg1BossCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-	// 캐릭터의 기본 캡슐이 플레이어를 막도록 설정합니다.
-	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
+    // 캐릭터의 기본 캡슐이 플레이어를 막도록 설정합니다.
+    GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
 
-	// --- 공격 충돌 박스 생성 및 설정 ---
-	LeftLegAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("LeftLegAttackCollision"));
-	LeftLegAttackCollision->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("L_Toe0Socket"));
-	
-	RightLegAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("RightLegAttackCollision"));
-	RightLegAttackCollision->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_Toe0Socket"));
+    // --- 공격 충돌 박스 생성 및 설정 ---
+    LeftLegAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("LeftLegAttackCollision"));
+    LeftLegAttackCollision->SetupAttachment(GetMesh(), FName("L_Toe0Socket"));
 
-	HeadAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("HeadAttackCollision"));
-	HeadAttackCollision->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HeadSocket"));
+    RightLegAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("RightLegAttackCollision"));
+    RightLegAttackCollision->SetupAttachment(GetMesh(), FName("R_Toe0Socket"));
+
+    HeadAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("HeadAttackCollision"));
+    HeadAttackCollision->SetupAttachment(GetMesh(), FName("HeadSocket"));
 
 
     LeftLegHitCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("LeftLegHitCollision"));
-    LeftLegHitCollision->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("L_Toe0Socket"));
-
+    LeftLegHitCollision->SetupAttachment(GetMesh(), FName("L_Toe0Socket"));
     RightLegHitCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("RightLegHitCollision"));
-    RightLegHitCollision->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_Toe0Socket"));
-
+    RightLegHitCollision->SetupAttachment(GetMesh(), FName("R_Toe0Socket"));
     HeadHitCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("HeadHitCollision"));
-    HeadHitCollision->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HeadSocket"));
-
+    HeadHitCollision->SetupAttachment(GetMesh(), FName("HeadSocket"));
 
     TArray<UBoxComponent*> AttackCollisions = { LeftLegAttackCollision, RightLegAttackCollision, HeadAttackCollision };
     for (UBoxComponent* Collision : AttackCollisions)
@@ -52,7 +49,8 @@ ASg1BossCharacter::ASg1BossCharacter()
         Collision->SetCollisionResponseToAllChannels(ECR_Ignore);
         Collision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);   // 플레이어 캐릭터와 충돌 (보스 공격)
         Collision->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
-        
+        Collision->SetGenerateOverlapEvents(true);
+
     }
     HitCollisions = { LeftLegHitCollision, RightLegHitCollision, HeadHitCollision };
     for (UBoxComponent* Collision : HitCollisions)
@@ -97,22 +95,22 @@ void ASg1BossCharacter::BeginPlay()
 
 
 
-	
 
-	
+
+
 
     CurrentHealth = MaxHealth;
 
-	// 부위별 HP 초기화 (총합이 MaxHealth와 일치하도록)
-	PartHealth.Add(EAttackPart::LeftLeg, MaxHealth / 3.0);
-	PartHealth.Add(EAttackPart::RightLeg, MaxHealth / 3.0);
-	PartHealth.Add(EAttackPart::Head, MaxHealth / 3.0);
-	
-	TotalCurrentHealth = 0.f;
-	for (auto& Elem : PartHealth)
-	{
-		TotalCurrentHealth += Elem.Value;
-	}
+    // 부위별 HP 초기화 (총합이 MaxHealth와 일치하도록)
+    PartHealth.Add(EAttackPart::LeftLeg, MaxHealth / 3.0);
+    PartHealth.Add(EAttackPart::RightLeg, MaxHealth / 3.0);
+    PartHealth.Add(EAttackPart::Head, MaxHealth / 3.0);
+
+    TotalCurrentHealth = 0.f;
+    for (auto& Elem : PartHealth)
+    {
+        TotalCurrentHealth += Elem.Value;
+    }
 
     PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
     if (!PlayerCharacter)
@@ -127,16 +125,16 @@ void ASg1BossCharacter::BeginPlay()
     }
     UE_LOG(LogTemp, Warning, TEXT("TotalCurrentHealth = %.2f | Expected MaxHealth = %.2f"), Total, MaxHealth);
 
-	// 각 공격 충돌 박스의 오버랩 이벤트에 함수를 연결(바인딩)합니다.
-	LeftLegAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ASg1BossCharacter::OnAttackOverlapBegin);
-	RightLegAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ASg1BossCharacter::OnAttackOverlapBegin);
-	HeadAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ASg1BossCharacter::OnAttackOverlapBegin);
+    // 각 공격 충돌 박스의 오버랩 이벤트에 함수를 연결(바인딩)합니다.
+    LeftLegAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ASg1BossCharacter::OnAttackOverlapBegin);
+    RightLegAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ASg1BossCharacter::OnAttackOverlapBegin);
+    HeadAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ASg1BossCharacter::OnAttackOverlapBegin);
 
 
     LeftLegHitCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     RightLegHitCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     HeadHitCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-    
+
 }
 
 void ASg1BossCharacter::Tick(float DeltaTime)
@@ -165,7 +163,7 @@ float ASg1BossCharacter::TakeDamage(float DamageAmount,
 
     EAttackPart HitPart = EAttackPart::None;
 
-    if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))          
+    if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
     {
         const FPointDamageEvent* PointEvent = static_cast<const FPointDamageEvent*>(&DamageEvent);
         UPrimitiveComponent* HitComp = PointEvent->HitInfo.Component.Get();
@@ -192,7 +190,7 @@ float ASg1BossCharacter::TakeDamage(float DamageAmount,
         {
 
             UE_LOG(LogTemp, Warning, TEXT("[Boss] Part %d destroyed (disable its attacks)."), (int32)HitPart);
-            
+
             OnPartDestroyed_BP(HitPart);
         }
         if (TotalCurrentHealth <= 0.f) Die();
@@ -213,7 +211,7 @@ void ASg1BossCharacter::DecideAttackPattern()
 
     const FVector BossToPlayer = PlayerCharacter->GetActorLocation() - GetActorLocation();
     const FVector BossForwardVector = GetActorForwardVector();
-    const FVector BossRightVector = FVector::CrossProduct(FVector::UpVector, BossForwardVector);
+    const FVector BossRightVector = GetActorRightVector();
     const FVector BossToPlayerNormalized = BossToPlayer.GetSafeNormal();
     const float DotProductWithRight = FVector::DotProduct(BossToPlayerNormalized, BossRightVector);
     const float DotProductWithForward = FVector::DotProduct(BossToPlayerNormalized, BossForwardVector);
@@ -237,7 +235,6 @@ void ASg1BossCharacter::PerformLeftLegAttack()
 {
     if (PartHealth.Contains(EAttackPart::LeftLeg) && PartHealth[EAttackPart::LeftLeg] <= 0.f)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Left Leg is destroyed! Cannot attack with Left Leg."));
         return;
     }
 
@@ -248,9 +245,9 @@ void ASg1BossCharacter::PerformLeftLegAttack()
 
     if (LeftLegAttackMontage)
     {
+        CurrentAttackPart = EAttackPart::LeftLeg;
         bIsAttacking = true;
         LastAttackTime = GetWorld()->GetTimeSeconds();
-        UE_LOG(LogTemp, Log, TEXT("Performing Left Leg Attack"));
         PlayAnimMontage(LeftLegAttackMontage);
     }
 }
@@ -260,7 +257,6 @@ void ASg1BossCharacter::PerformRightLegAttack()
 
     if (PartHealth.Contains(EAttackPart::RightLeg) && PartHealth[EAttackPart::RightLeg] <= 0.f)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Right Leg is destroyed! Cannot attack with Right Leg."));
         return;
     }
     if (GetMesh()->GetAnimInstance() && GetMesh()->GetAnimInstance()->Montage_IsPlaying(nullptr))
@@ -270,9 +266,9 @@ void ASg1BossCharacter::PerformRightLegAttack()
 
     if (RightLegAttackMontage)
     {
+        CurrentAttackPart = EAttackPart::RightLeg;
         bIsAttacking = true;
         LastAttackTime = GetWorld()->GetTimeSeconds();
-        UE_LOG(LogTemp, Log, TEXT("Performing Right Leg Attack"));
         PlayAnimMontage(RightLegAttackMontage);
     }
 }
@@ -281,7 +277,6 @@ void ASg1BossCharacter::PerformHeadAttack()
 {
     if (PartHealth.Contains(EAttackPart::Head) && PartHealth[EAttackPart::Head] <= 0.f)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Head is destroyed! Cannot attack with Head."));
         return;
     }
     if (GetMesh()->GetAnimInstance() && GetMesh()->GetAnimInstance()->Montage_IsPlaying(nullptr))
@@ -291,75 +286,71 @@ void ASg1BossCharacter::PerformHeadAttack()
 
     if (HeadAttackMontage)
     {
+        CurrentAttackPart = EAttackPart::Head;
         bIsAttacking = true;
         LastAttackTime = GetWorld()->GetTimeSeconds();
-        UE_LOG(LogTemp, Log, TEXT("Performing Head Attack"));
         PlayAnimMontage(HeadAttackMontage);
     }
 }
 
 void ASg1BossCharacter::Die()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Sg1Boss has died."));
+    UE_LOG(LogTemp, Warning, TEXT("Sg1Boss has died."));
 
-	// AI 로직을 멈춥니다.
-	AAIController* AIController = Cast<AAIController>(GetController());
-	if (AIController && AIController->BrainComponent)
-	{
-		AIController->BrainComponent->StopLogic("Death");
-	}
+    // AI 로직을 멈춥니다.
+    AAIController* AIController = Cast<AAIController>(GetController());
+    if (AIController && AIController->BrainComponent)
+    {
+        AIController->BrainComponent->StopLogic("Death");
+    }
 
-	// 충돌을 없애고 래그돌을 활성화합니다.
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
-	GetMesh()->SetSimulatePhysics(true);
+    // 충돌을 없애고 래그돌을 활성화합니다.
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+    GetMesh()->SetSimulatePhysics(true);
 
-	if (DeathMontage)
-	{
-		PlayAnimMontage(DeathMontage);
-	}
+    if (DeathMontage)
+    {
+        PlayAnimMontage(DeathMontage);
+    }
 
-	// 10초 뒤에 액터를 파괴합니다.
-	SetLifeSpan(10.0f);
+    // 10초 뒤에 액터를 파괴합니다.
+    SetLifeSpan(10.0f);
 }
 
 void ASg1BossCharacter::ActivateAttackCollision(EAttackPart PartToActivate)
 {
-	UE_LOG(LogTemp, Warning, TEXT("--- ActivateAttackCollision CALLED ---"));
-	// 새로운 공격을 시작하기 전에 이전에 맞았던 액터 목록을 비웁니다.
-	HitActors.Empty();
+    // 새로운 공격을 시작하기 전에 이전에 맞았던 액터 목록을 비웁니다.
+    HitActors.Empty();
 
-	// 안전을 위해 모든 공격 콜리전을 먼저 끕니다.
-	UE_LOG(LogTemp, Warning, TEXT("Deactivating ALL boxes before activation."));
-	LeftLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	RightLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	HeadAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    LeftLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    RightLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    HeadAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	// 이제 필요한 콜리전만 다시 켭니다.
-	switch (PartToActivate)
-	{
-		case EAttackPart::LeftLeg:
-			UE_LOG(LogTemp, Warning, TEXT("ACTIVATING Left Leg Collision ONLY."));
-			LeftLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-			break;
-		case EAttackPart::RightLeg:
-			UE_LOG(LogTemp, Warning, TEXT("ACTIVATING Right Leg Collision ONLY."));
-			RightLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-			break;
-		case EAttackPart::Head:
-			UE_LOG(LogTemp, Warning, TEXT("ACTIVATING Head Collision ONLY."));
-			HeadAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-			break;
-	}
+    switch (CurrentAttackPart)
+    {
+    case EAttackPart::LeftLeg:
+        LeftLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        break;
+    case EAttackPart::RightLeg:
+        RightLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        break;
+    case EAttackPart::Head:
+        HeadAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        break;
+    case EAttackPart::None:
+        UE_LOG(LogTemp, Error, TEXT("CurrentAttackPart is None! No collision was activated."));
+        break;
+    }
 }
 
 void ASg1BossCharacter::DeactivateAttackCollision()
 {
-	UE_LOG(LogTemp, Warning, TEXT("--- DeactivateAttackCollision CALLED. Turning ALL boxes OFF. ---"));
-	LeftLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	RightLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	HeadAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	HitActors.Empty(); // 확실하게 한번 더 비워줍니다.
+    UE_LOG(LogTemp, Warning, TEXT("--- DeactivateAttackCollision CALLED. Turning ALL boxes OFF. ---"));
+    LeftLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    RightLegAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    HeadAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    HitActors.Empty(); // 확실하게 한번 더 비워줍니다.
 }
 
 void ASg1BossCharacter::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -383,7 +374,7 @@ void ASg1BossCharacter::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComp
 // 이 함수는 AnimNotify에서 호출하여 공격이 끝났음을 알리고 상태를 초기화하는 데 사용합니다.
 void ASg1BossCharacter::ResetAttackState()
 {
-	bIsAttacking = false;
+    bIsAttacking = false;
 }
 
 EAttackPart ASg1BossCharacter::DetectHitPart(FName BoneName)

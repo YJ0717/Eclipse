@@ -14,6 +14,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Sg1Monster1.h"
 #include "Sg1Monster2.h"
+#include "Sg2Monster3.h"
 #include "Sg1BossCharacter.h"
 #include "World2Boss/World2AIBossCharacter.h"
 #include "Components/BoxComponent.h"
@@ -755,6 +756,21 @@ void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent,
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
 		}
 	}
+
+
+	ASg2Monster3* Monster3 = Cast<ASg2Monster3>(OtherActor);
+	if (Monster3 && !HitActors.Contains(Monster3))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Weapon Hit Monster3: %s"), *Monster3->GetName());
+		UGameplayStatics::ApplyDamage(Monster3, AttackDamage, GetController(), this, UDamageType::StaticClass());
+		HitActors.Add(Monster3);
+
+		if (ImpactEffect)
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
+		}
+	}
+
 
 	ASg1BossCharacter* Boss = Cast<ASg1BossCharacter>(OtherActor);
 	if (Boss)
