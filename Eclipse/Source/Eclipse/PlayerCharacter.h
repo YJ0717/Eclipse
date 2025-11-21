@@ -157,6 +157,7 @@ protected:
 	void Attack();
 	void Dodge(const FInputActionValue& Value);
 	void Parry(); // 패링 함수
+	void ToggleGodMode();
 
 	void Skill(const FInputActionValue& Value); // 스킬 함수
 	void Heal(const FInputActionValue& Value); // HP회복
@@ -244,11 +245,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SaveAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* GodModeAction;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Input)
 	float TurnRateGamepad;
 
 private:
 	bool bIsRolling;
+	bool bIsGodMode;
 	bool IsParryWindowActive() const;
 
 protected:
