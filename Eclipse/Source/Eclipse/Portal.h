@@ -15,31 +15,30 @@ public:
 	// Sets default values for this actor's properties
 	APortal();
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-    // Ãæµ¹ Æ®¸®°Å
+    // í¬íƒˆ ì¶©ëŒ íŠ¸ë¦¬ê±°
     UPROPERTY(VisibleAnywhere)
     class UBoxComponent* TriggerBox;
 
-    // ´ÙÀ½ ¸Ê ÀÌ¸§ (¿©±â ÀúÀå)
+    // ë¡œë“œí•  ë ˆë²¨ì˜ ì´ë¦„
     UPROPERTY(EditAnywhere, Category = "Portal")
     FName LevelToLoad;
 
-    // µµÂø À§Ä¡ Actor (·¹º§ ¾ÈÀÇ ¾Æ¹« ¾×ÅÍ)
+    // íƒ€ê²Ÿ ìœ„ì¹˜ ì•¡í„° (í”Œë ˆì´ì–´ê°€ í¬íƒˆì„ í†µê³¼í•œ í›„ ìŠ¤í°ë  ìœ„ì¹˜ë¥¼ ë‚˜íƒ€ë‚´ëŠ” ì•¡í„°ì˜ ì´ë¦„)
     UPROPERTY(EditAnywhere, Category = "Portal")
     FName TargetActorName;
 
+    // í¬íƒˆì´ ë‹¤ë¥¸ ì•¡í„°ì™€ ê²¹ì¹˜ê¸° ì‹œì‘í•  ë•Œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
     UFUNCTION()
     void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
         bool bFromSweep, const FHitResult& SweepResult);
 
+protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	
-	
 };

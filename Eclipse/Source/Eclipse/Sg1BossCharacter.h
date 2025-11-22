@@ -20,12 +20,17 @@ enum class EAttackPart : uint8
 	None
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBossDiedSignature, ASg1BossCharacter*, BossCharacter);
+
 UCLASS()
 class ECLIPSE_API ASg1BossCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
 public:
+
+	UPROPERTY(BlueprintAssignable, Category = "Sg1Boss|Event")
+	FOnBossDiedSignature OnBossDied;
 
 	
 

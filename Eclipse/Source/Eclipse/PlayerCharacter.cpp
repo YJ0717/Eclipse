@@ -103,6 +103,8 @@ APlayerCharacter::APlayerCharacter()
 	GetCharacterMovement()->MaxWalkSpeed = 600.f;
 
 	ParryCameraTimelineComp = CreateDefaultSubobject<UTimelineComponent>(TEXT("ParryCameraTimeline"));
+
+	bIsGodMode = false;
 }
 
 void APlayerCharacter::BeginPlay()
@@ -203,6 +205,24 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		// 세이브 입력 바인딩
 		EnhancedInputComponent->BindAction(SaveAction, ETriggerEvent::Started, this, &APlayerCharacter::SavePlayerState);
+		EnhancedInputComponent->BindAction(GodModeAction, ETriggerEvent::Started, this, &APlayerCharacter::ToggleGodMode);
+	}
+}
+
+void APlayerCharacter::ToggleGodMode()
+{
+	bIsGodMode = !bIsGodMode;
+
+	if (GEngine)
+	{
+		if (bIsGodMode)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("God Mode Activated"));
+		}
+		else
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("God Mode Deactivated"));
+		}
 	}
 }
 
@@ -604,6 +624,10 @@ void APlayerCharacter::Tick(float DeltaTime)
 
 float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	if (bIsGodMode)
+	{
+		return 0.f;
+	}
 	// 패링 성공 로직
 	if (IsParryWindowActive() && DamageCauser)
 	{

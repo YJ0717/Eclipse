@@ -316,6 +316,9 @@ void ASg1BossCharacter::Die()
         PlayAnimMontage(DeathMontage);
     }
 
+    // 보스가 죽었음을 알리는 델리게이트를 호출합니다.
+    OnBossDied.Broadcast(this);
+
     // 10초 뒤에 액터를 파괴합니다.
     SetLifeSpan(10.0f);
 }
