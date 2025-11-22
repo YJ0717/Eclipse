@@ -138,6 +138,10 @@ public:
 	FVector BossSocketOffset = FVector(0.f, 60.f, 200.f);
 
 
+	//죽었을떄 UI용도
+	UFUNCTION(BlueprintImplementableEvent, Category = "die")
+	void PlayerDieUI();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;

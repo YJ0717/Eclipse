@@ -309,6 +309,8 @@ void ASg1BossCharacter::Die()
     GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
     GetMesh()->SetSimulatePhysics(true);
 
+    DieUI();
+
     if (DeathMontage)
     {
         PlayAnimMontage(DeathMontage);

@@ -126,6 +126,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Sg1Boss|Attack")
 	void ResetAttackState();
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "die")
+	void DieUI();
+
 private:
 	// -- AI 및 공격 로직 --
 
@@ -139,6 +142,9 @@ private:
 
 	// 사망 처리
 	void Die();
+
+	
+
 
 	// 공격이 플레이어와 겹쳤을 때 호출될 함수입니다.
 	UFUNCTION()
