@@ -4,6 +4,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/BoxComponent.h"
 #include "TimerManager.h"
+#include "Components/CapsuleComponent.h"
 
 AWorld2AIBossCharacter::AWorld2AIBossCharacter()
 {
@@ -17,6 +18,8 @@ AWorld2AIBossCharacter::AWorld2AIBossCharacter()
     bCanDoNextCombo = false;
     bIsComboAttacking = false;
     CurrentComboIndex = 0;
+
+    CurrentHealth = MaxHealth;
 
     // 오른손 무기 충돌 박스를 생성하고 오른손 무기 소켓에 붙입니다.
     RightWeaponCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("RightWeaponCollisionBox"));
@@ -39,6 +42,9 @@ void AWorld2AIBossCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
+    CurrentHealth = MaxHealth;
+    bIsDead = false;
+
     PlayerCharacter = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 
     // 양손 무기 충돌 박스의 오버랩 이벤트에 함수를 바인딩합니다.
@@ -58,6 +64,8 @@ void AWorld2AIBossCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    if (bIsDead) return;
+
     // 공격 중에는 회전 및 이동 등 모든 AI 로직을 정지시켜 제자리에 고정합니다.
     if (bIsComboAttacking)
     {
@@ -67,6 +75,7 @@ void AWorld2AIBossCharacter::Tick(float DeltaTime)
     if (GEngine)
     {
         GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Yellow, FString::Printf(TEXT("Current State: %s"), *UEnum::GetValueAsString(CurrentAIState)));
+        GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Boss HP: %f"), CurrentHealth));
     }
 
     if (PlayerCharacter)
@@ -78,7 +87,7 @@ void AWorld2AIBossCharacter::Tick(float DeltaTime)
 
 void AWorld2AIBossCharacter::FacePlayer(float DeltaTime)
 {
-    if (!PlayerCharacter) return;
+    if (!PlayerCharacter || bIsDead) return;
 
     const FVector DirectionToPlayer = PlayerCharacter->GetActorLocation() - GetActorLocation();
     const FRotator TargetRotation = FRotator(0.0f, DirectionToPlayer.Rotation().Yaw, 0.0f);
@@ -87,7 +96,7 @@ void AWorld2AIBossCharacter::FacePlayer(float DeltaTime)
 
 void AWorld2AIBossCharacter::MakeDecision()
 {
-    if (CurrentAIState == EBossAIState::Attacking || CurrentAIState == EBossAIState::BackingOff || bIsCharging || bIsSideDashing || bIsComboAttacking) return;
+    if (bIsDead || CurrentAIState == EBossAIState::Attacking || CurrentAIState == EBossAIState::BackingOff || bIsCharging || bIsSideDashing || bIsComboAttacking) return;
 
     float Distance = GetDistanceTo(PlayerCharacter);
 
@@ -148,6 +157,12 @@ void AWorld2AIBossCharacter::MakeDecision()
 
 void AWorld2AIBossCharacter::ExecuteState(float DeltaTime)
 {
+    if (bIsDead)
+    {
+        GetCharacterMovement()->StopMovementImmediately();
+        return;
+    }
+
     // 공격 또는 쿨다운 상태일 때는 모든 움직임을 멈추고 아무것도 하지 않습니다.
     if (CurrentAIState == EBossAIState::Attacking || CurrentAIState == EBossAIState::AttackCooldown)
     {
@@ -216,13 +231,55 @@ void AWorld2AIBossCharacter::ExecuteState(float DeltaTime)
 
 float AWorld2AIBossCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+    if (bIsDead)
+    {
+        return 0.0f;
+    }
+
     const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
     if (ActualDamage > 0.0f)
     {
-        UE_LOG(LogTemp, Warning, TEXT("HIT! World2AIBossCharacter '%s' took %.2f damage from %s."), *GetName(), ActualDamage, *DamageCauser->GetName());
+        CurrentHealth -= ActualDamage;
+        UE_LOG(LogTemp, Warning, TEXT("HIT! World2AIBossCharacter '%s' took %.2f damage. CurrentHealth: %.2f"), *GetName(), ActualDamage, CurrentHealth);
+
+        if (CurrentHealth <= 0.0f)
+        {
+            bIsDead = true;
+            CurrentAIState = EBossAIState::Dead;
+
+            // AI 로직 중지
+            GetWorldTimerManager().ClearTimer(DecisionTimer);
+            GetCharacterMovement()->StopMovementImmediately();
+
+            // 충돌 비활성화
+            GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+            RightWeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+            LeftWeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+            // 사망 몽타주 재생
+            if (DeathMontage)
+            {
+                PlayAnimMontage(DeathMontage);
+                FOnMontageEnded MontageEndedDelegate;
+                MontageEndedDelegate.BindUObject(this, &AWorld2AIBossCharacter::OnDeathMontageEnded);
+                GetMesh()->GetAnimInstance()->Montage_SetEndDelegate(MontageEndedDelegate, DeathMontage);
+            }
+            else
+            {
+                // 몽타주가 없으면 3초 후 바로 소멸
+                SetLifeSpan(3.0f);
+            }
+        }
     }
     return ActualDamage;
 }
+
+void AWorld2AIBossCharacter::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    // 몽타주가 끝나면 액터를 소멸시킵니다.
+    Destroy();
+}
+
 
 void AWorld2AIBossCharacter::OnChargeEnd()
 {
@@ -238,7 +295,7 @@ void AWorld2AIBossCharacter::OnSideDashEnd()
 
 void AWorld2AIBossCharacter::PerformAttack()
 {
-    if (AttackMontages.Num() == 0) return;
+    if (AttackMontages.Num() == 0 || bIsDead) return;
 
     bIsComboAttacking = true;
     // 콤보의 시작점을 무작위로 결정합니다. (0: 어택1, 1: 어택2, 2: 어택3)
@@ -256,7 +313,7 @@ void AWorld2AIBossCharacter::PerformAttack()
 
 void AWorld2AIBossCharacter::CheckForNextCombo()
 {
-    if (!bCanDoNextCombo || !bIsComboAttacking) return;
+    if (!bCanDoNextCombo || !bIsComboAttacking || bIsDead) return;
 
     bCanDoNextCombo = false;
 
@@ -298,6 +355,8 @@ void AWorld2AIBossCharacter::CheckForNextCombo()
 
 void AWorld2AIBossCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+    if (bIsDead) return;
+
     // 콤보를 시도할 수 있는 창이 열려있을 때는, 이 함수가 콤보를 방해하지 않도록 합니다.
     if (bCanDoNextCombo) return;
 
@@ -320,6 +379,7 @@ void AWorld2AIBossCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bI
 
 void AWorld2AIBossCharacter::ActivateWeaponCollision()
 {
+    if (bIsDead) return;
     HitActors.Empty();
 
     if (LeftWeaponCollisionBox)
@@ -346,7 +406,7 @@ void AWorld2AIBossCharacter::DeactivateWeaponCollision()
 
 void AWorld2AIBossCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-    if (OtherActor == this || HitActors.Contains(OtherActor)) return;
+    if (bIsDead || OtherActor == this || HitActors.Contains(OtherActor)) return;
 
     APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor);
     if (Player)
