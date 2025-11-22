@@ -593,7 +593,7 @@ void APlayerCharacter::Tick(float DeltaTime)
 			if (FloorDist > 5.f)
 			{
 				FVector TargetLoc = GetActorLocation();
-				TargetLoc.Z -= FMath::Clamp(FloorDist - 5.f, 0.f, 10.f); // 부드럽게 보정
+				TargetLoc.Z -= FMath::Clamp(FloorDist - 10.f, 0.f, 10.f); // 부드럽게 보정
 				SetActorLocation(TargetLoc, true);
 			}
 		}
@@ -678,6 +678,8 @@ void APlayerCharacter::Die()
 
 	GetCharacterMovement()->DisableMovement();
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	PlayerDieUI();
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && DeathMontage)
