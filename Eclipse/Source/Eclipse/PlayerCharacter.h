@@ -150,6 +150,10 @@ public:
 	//죽었을떄 UI용도
 	UFUNCTION(BlueprintImplementableEvent, Category = "die")
 	void PlayerDieUI();
+
+
+	
+
 	//카메라 보간용 함수
 	void UpdateCameraByNearbyEnemies(float DeltaTime);
 protected:
@@ -162,9 +166,18 @@ protected:
 	void SavePlayerState();
 	void LoadPlayerState();
 
+	
 
 	// 플레이어 사망 처리 함수
 	void Die();
+
+
+	// 타이틀 레벨로 돌아가는 함수
+	void ReturnToTitle();
+
+	// 이동할 타이틀 레벨의 이름
+	UPROPERTY(EditDefaultsOnly, Category = "Level")
+	FName TitleLevelName = "Start";
 
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);

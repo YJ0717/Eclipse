@@ -7,6 +7,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Controller.h"
+#include "GameFramework/PlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
@@ -55,6 +56,17 @@ AEclipseCharacter::AEclipseCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+}
+
+void AEclipseCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Get the player controller and enable the FPS counter
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{
+		PlayerController->ConsoleCommand(TEXT("stat fps"), true);
+	}
 }
 
 void AEclipseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

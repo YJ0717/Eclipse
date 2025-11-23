@@ -572,7 +572,7 @@ void APlayerCharacter::Tick(float DeltaTime)
 		return;
 
 	// 공격·구르기 중에만 적용
-	if (bIsAttacking || bIsRolling)
+	if (bIsAttacking || bIsRolling || bIsUsingSkill)
 	{
 		
 		FHitResult FloorHit;
@@ -684,6 +684,8 @@ void APlayerCharacter::Die()
 
 	PlayerDieUI();
 
+	GetWorld()->GetTimerManager().SetTimer(DeathTimerHandle, this, &APlayerCharacter::ReturnToTitle, 5.0f, false);
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && DeathMontage)
 	{
@@ -699,6 +701,7 @@ void APlayerCharacter::Die()
 		SetActorEnableCollision(false);
 		SetLifeSpan(0.1f); // 짧은 수명 설정
 	}
+	
 }
 
 void APlayerCharacter::OnDeathAnimationEnded(UAnimMontage* Montage, bool bInterrupted)
@@ -706,7 +709,6 @@ void APlayerCharacter::OnDeathAnimationEnded(UAnimMontage* Montage, bool bInterr
 	// 사망 애니메이션 종료 후 처리 (예: 액터 숨김, 게임 오버 UI 호출 등)
 	SetActorHiddenInGame(true);
 	SetActorEnableCollision(false);
-	SetLifeSpan(0.1f); // 짧은 수명 설정
 	// 게임 오버 UI 호출 등을 여기에 구현
 }
 
@@ -852,6 +854,10 @@ bool APlayerCharacter::IsParryWindowActive() const
 
 void APlayerCharacter::Skill(const FInputActionValue& Value)
 {
+	if (GetCharacterMovement()->IsFalling())
+	{
+		return;
+	}
 	if (bIsWeaponEquipped && SkillMontages.IsValidIndex(SkillAttack))
 	{
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -881,6 +887,10 @@ void APlayerCharacter::OnSkillMontageEnded(UAnimMontage* Montage, bool bInterrup
 
 void APlayerCharacter::Heal(const FInputActionValue& Value)
 {
+	if (GetCharacterMovement()->IsFalling())
+	{
+		return;
+	}
 	if (bIsHealing || CurrentEst <= 0)
 		return;
 
@@ -891,6 +901,14 @@ void APlayerCharacter::Heal(const FInputActionValue& Value)
 	if (AnimInstance && HealMontage)
 	{
 		bIsHealing = true;
+
+		// ✅ 입력 차단
+		APlayerController* PC = Cast<APlayerController>(GetController());
+		if (PC)
+		{
+			DisableInput(PC);
+		}
+
 		AnimInstance->Montage_Play(HealMontage);
 
 		FOnMontageEnded MontageEndedDelegate;
@@ -901,14 +919,21 @@ void APlayerCharacter::Heal(const FInputActionValue& Value)
 	CurrentEst -= 1;
 }
 
+
 void APlayerCharacter::OnHealMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	if (Montage == HealMontage)
 	{
 		bIsHealing = false;
+
+		// ✅ 입력 복구
+		APlayerController* PC = Cast<APlayerController>(GetController());
+		if (PC)
+		{
+			EnableInput(PC);
+		}
 	}
 }
-
 void APlayerCharacter::InitializeTraits()//현재 쓰지는 않지만 나중에 죽고 정렬시킬때 쓸수도있어서 남겨둠
 {
 	AllTraits.Empty();
@@ -998,7 +1023,7 @@ void APlayerCharacter::UpdateCameraByNearbyEnemies(float DeltaTime)
 		ASg1Monster2::StaticClass(),
 		ASg2Monster3::StaticClass(),
 		ASg1Monster1::StaticClass(),
-		
+		AWorld2AIBossCharacter::StaticClass(),
 		// 필요한 적들 계속 추가
 	};
 
@@ -1046,4 +1071,9 @@ void APlayerCharacter::UpdateCameraByNearbyEnemies(float DeltaTime)
 		DeltaTime,
 		5.0f
 	);
+}
+
+void APlayerCharacter::ReturnToTitle()
+{
+	UGameplayStatics::OpenLevel(GetWorld(), TitleLevelName);
 }
