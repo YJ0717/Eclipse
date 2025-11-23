@@ -3,6 +3,7 @@
 #include "Sg1Monster2.h"
 #include "Sg1BossCharacter.h"
 #include "Sg2Monster3.h"
+#include "Sg2Monster4.h"
 #include "World2Boss/World2AIBossCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/SphereComponent.h"
@@ -82,13 +83,22 @@ void ACharacterSkillActor::OnSkillOverlap(UPrimitiveComponent* OverlappedCompone
 		HitActors.Add(Monster2);
 	}
 
-	// ===== 몬스터 2 =====
+	// ===== 몬스터 3 =====
 	else if (ASg2Monster3* Monster3 = Cast<ASg2Monster3>(OtherActor))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Skill] Hit Monster3: %s"), *Monster3->GetName());
 		UGameplayStatics::ApplyDamage(Monster3, Damage, GetInstigatorController(), this, UDamageType::StaticClass());
 		HitActors.Add(Monster3);
 	}
+
+	// ===== 몬스터 4 =====
+	else if (ASg2Monster4* Monster4 = Cast<ASg2Monster4>(OtherActor))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Skill] Hit Monster4: %s"), *Monster4->GetName());
+		UGameplayStatics::ApplyDamage(Monster4, Damage, GetInstigatorController(), this, UDamageType::StaticClass());
+		HitActors.Add(Monster4);
+	}
+
 
 	// ===== 보스 1 =====
 	else if (ASg1BossCharacter* Boss = Cast<ASg1BossCharacter>(OtherActor))

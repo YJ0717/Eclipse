@@ -15,6 +15,7 @@
 #include "Sg1Monster1.h"
 #include "Sg1Monster2.h"
 #include "Sg2Monster3.h"
+#include "Sg2Monster4.h"
 #include "Sg1BossCharacter.h"
 #include "World2Boss/World2AIBossCharacter.h"
 #include "Components/BoxComponent.h"
@@ -564,32 +565,7 @@ void APlayerCharacter::Tick(float DeltaTime)
 	);
 
 	// 2) 보스와 거리 체크
-	AActor* Boss = UGameplayStatics::GetActorOfClass(GetWorld(), ASg1BossCharacter::StaticClass());
-	if (Boss)
-	{
-		float DistanceToBoss = FVector::Dist(GetActorLocation(), Boss->GetActorLocation());
-
-		if (DistanceToBoss < BossNearDistance)
-		{
-			// 보스 가까우면 카메라 위로 이동
-			CameraBoom->SocketOffset = FMath::VInterpTo(
-				CameraBoom->SocketOffset,
-				BossSocketOffset,
-				DeltaTime,
-				5.0f // 부드러운 전환 속도
-			);
-		}
-		else
-		{
-			// 보스 멀어지면 원래대로
-			CameraBoom->SocketOffset = FMath::VInterpTo(
-				CameraBoom->SocketOffset,
-				DefaultSocketOffset,
-				DeltaTime,
-				5.0f
-			);
-		}
-	}
+	UpdateCameraByNearbyEnemies(DeltaTime);
 	//3 구르기 공격  보정
 	// 점프/낙하 중엔 적용 X
 	if (GetCharacterMovement()->IsFalling())
@@ -598,7 +574,10 @@ void APlayerCharacter::Tick(float DeltaTime)
 	// 공격·구르기 중에만 적용
 	if (bIsAttacking || bIsRolling)
 	{
+		
 		FHitResult FloorHit;
+
+
 		FVector Start = GetActorLocation();
 		FVector End = Start - FVector(0, 0, 150.f);
 
@@ -796,7 +775,20 @@ void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent,
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
 		}
 	}
+	
 
+	ASg2Monster4* Monster4 = Cast<ASg2Monster4>(OtherActor);
+	if (Monster4 && !HitActors.Contains(Monster4))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Weapon Hit Monster4: %s"), *Monster4->GetName());
+		UGameplayStatics::ApplyDamage(Monster4, AttackDamage, GetController(), this, UDamageType::StaticClass());
+		HitActors.Add(Monster3);
+
+		if (ImpactEffect)
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
+		}
+	}
 
 	ASg1BossCharacter* Boss = Cast<ASg1BossCharacter>(OtherActor);
 	if (Boss)
@@ -995,4 +987,63 @@ void APlayerCharacter::LoadPlayerState()
             GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("No Save Game found!"));
         }
     }
+}
+
+
+void APlayerCharacter::UpdateCameraByNearbyEnemies(float DeltaTime)
+{
+	static TArray<TSubclassOf<AActor>> CameraAffectingEnemyClasses = {
+		ASg1BossCharacter::StaticClass(),
+		ASg1Monster1::StaticClass(),
+		ASg1Monster2::StaticClass(),
+		ASg2Monster3::StaticClass(),
+		ASg1Monster1::StaticClass(),
+		
+		// 필요한 적들 계속 추가
+	};
+
+	bool bIsNearEnemy = false;
+
+	for (TSubclassOf<AActor> EnemyClass : CameraAffectingEnemyClasses)
+	{
+		TArray<AActor*> FoundEnemies;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), EnemyClass, FoundEnemies);
+
+		for (AActor* Enemy : FoundEnemies)
+		{
+			if (!IsValid(Enemy)) continue;
+
+			float Distance = FVector::Dist(GetActorLocation(), Enemy->GetActorLocation());
+			if (Distance < BossNearDistance)
+			{
+				bIsNearEnemy = true;
+				break;
+			}
+		}
+
+		if (bIsNearEnemy)
+			break;
+	}
+
+	FVector TargetOffset = bIsNearEnemy ? BossSocketOffset : DefaultSocketOffset;
+
+	if (bIsNearEnemy)
+	{
+		CameraBoom->bDoCollisionTest = false;
+		// 몬스터 가까이 있을 때만 Z 위치 제한
+		TargetOffset.Z = FMath::Clamp(TargetOffset.Z, MinZ, MaxZ);
+		
+		TargetOffset.X = FMath::Clamp(TargetOffset.X, MinX, MaxX);
+	}
+	else
+	{
+		
+		CameraBoom->bDoCollisionTest = true;
+	}
+	CameraBoom->SocketOffset = FMath::VInterpTo(
+		CameraBoom->SocketOffset,
+		TargetOffset,
+		DeltaTime,
+		5.0f
+	);
 }

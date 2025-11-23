@@ -137,11 +137,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	FVector BossSocketOffset = FVector(0.f, 60.f, 200.f);
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float MinZ = 120.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float MaxZ = 120.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float MinX = -300.f; // 더 뒤로 밀고 싶으면 이 값 더 작게
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float MaxX = -100.f; // 너무 멀리 가는 것 방지용
 
 	//죽었을떄 UI용도
 	UFUNCTION(BlueprintImplementableEvent, Category = "die")
 	void PlayerDieUI();
-
+	//카메라 보간용 함수
+	void UpdateCameraByNearbyEnemies(float DeltaTime);
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
