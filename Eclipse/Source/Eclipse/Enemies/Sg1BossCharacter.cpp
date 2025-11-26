@@ -8,7 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/BoxComponent.h"
-#include "PlayerCharacter.h"
+#include "Player/PlayerCharacter.h"
 #include "AIController.h" // AI 컨트롤러를 사용하기 위해 추가
 #include "BrainComponent.h" // 브레인 컴포넌트를 사용하기 위해 추가
 #include "GameFramework/DamageType.h"

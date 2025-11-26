@@ -35,7 +35,11 @@ public class Eclipse : ModuleRules
 			"Eclipse/Variant_Combat/AI",
 			"Eclipse/Variant_SideScrolling",
 			"Eclipse/Variant_SideScrolling/Gameplay",
-			"Eclipse/Variant_SideScrolling/AI"
+			"Eclipse/Variant_SideScrolling/AI",
+			"Eclipse/Player",
+			"Eclipse/Enemies",
+			"Eclipse/GameFramework",
+			"Eclipse/Gameplay"
 		});
 
 		// Uncomment if you are using Slate UI

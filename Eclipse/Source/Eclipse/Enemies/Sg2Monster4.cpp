@@ -8,8 +8,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/BoxComponent.h"
 #include "Navigation/PathFollowingComponent.h"
-#include "PlayerCharacter.h"
-#include "RiposteDamageType.h"
+#include "Player/PlayerCharacter.h"
+#include "Gameplay/RiposteDamageType.h"
 #include "Engine/DamageEvents.h"
 
 ASg2Monster4::ASg2Monster4()

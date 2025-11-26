@@ -12,18 +12,18 @@
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "Sg1Monster1.h"
-#include "Sg1Monster2.h"
-#include "Sg2Monster3.h"
-#include "Sg2Monster4.h"
-#include "Sg1BossCharacter.h"
+#include "Enemies/Sg1Monster1.h"
+#include "Enemies/Sg1Monster2.h"
+#include "Enemies/Sg2Monster3.h"
+#include "Enemies/Sg2Monster4.h"
+#include "Enemies/Sg1BossCharacter.h"
 #include "World2Boss/World2AIBossCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Engine/Engine.h"
-#include "RiposteDamageType.h"
-#include "EclipseGameInstance.h" // 게임 인스턴스 헤더
-#include "EclipseSaveGame.h" // 세이브 시스템 헤더
-#include "SaveGameData.h" // 세이브 데이터 헤더
+#include "Gameplay/RiposteDamageType.h"
+#include "GameFramework/EclipseGameInstance.h" // 게임 인스턴스 헤더
+#include "GameFramework/EclipseSaveGame.h" // 세이브 시스템 헤더
+#include "GameFramework/SaveGameData.h" // 세이브 데이터 헤더
 
 
 // DestructibleWall 헤더 추가

@@ -8,8 +8,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/BoxComponent.h"
 #include "Navigation/PathFollowingComponent.h"
-#include "PlayerCharacter.h"
-#include "RiposteDamageType.h"
+#include "Player/PlayerCharacter.h"
+#include "Gameplay/RiposteDamageType.h"
 #include "Engine/DamageEvents.h"
 
 ASg1Monster2::ASg1Monster2()
@@ -23,20 +23,20 @@ ASg1Monster2::ASg1Monster2()
 	PatrolRadius = 1500.f;
 	ChaseTimeout = 5.0f;
 	MonsterState = EMonster2State::EMS_Patrolling;
-	MonsterAttackDamage = 15.f; // ¸ó½ºÅÍ °ø°Ý µ¥¹ÌÁö ÃÊ±âÈ­
+	MonsterAttackDamage = 15.f; // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­
 
-	// ¿À¸¥¼Õ ÄÝ¸®Àü ¹Ú½º ¼³Á¤
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ý¸ï¿½ï¿½ï¿½ ï¿½Ú½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	RightHandCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("RightHandCollisionBox"));
-	RightHandCollisionBox->SetupAttachment(GetMesh(), FName("hand_rSocket")); // ¸ó½ºÅÍ ½ºÄÌ·¹ÅæÀÇ ¿À¸¥¼Õ ¼ÒÄÏ ÀÌ¸§À¸·Î º¯°æ ÇÊ¿ä
-	RightHandCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision); // ±âº»ÀûÀ¸·Î ºñÈ°¼ºÈ­
+	RightHandCollisionBox->SetupAttachment(GetMesh(), FName("hand_rSocket")); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì·ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¸ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½
+	RightHandCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision); // ï¿½âº»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È°ï¿½ï¿½È­
 	RightHandCollisionBox->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
 	RightHandCollisionBox->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-	RightHandCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap); // ÇÃ·¹ÀÌ¾î¿Í¸¸ ¿À¹ö·¦
+	RightHandCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap); // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½Í¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-	// ¿À¸¥¼Õ ÄÝ¸®Àü ¹Ú½º ¼³Á¤
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ý¸ï¿½ï¿½ï¿½ ï¿½Ú½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	LeftHandCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("LeftHandCollisionBox"));
-	LeftHandCollisionBox->SetupAttachment(GetMesh(), FName("hand_lSocket")); // ¸ó½ºÅÍ ½ºÄÌ·¹ÅæÀÇ ¿À¸¥¼Õ ¼ÒÄÏ ÀÌ¸§À¸·Î º¯°æ ÇÊ¿ä
-	LeftHandCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision); // ±âº»ÀûÀ¸·Î ºñÈ°¼ºÈ­
+	LeftHandCollisionBox->SetupAttachment(GetMesh(), FName("hand_lSocket")); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì·ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¸ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½
+	LeftHandCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision); // ï¿½âº»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È°ï¿½ï¿½È­
 	LeftHandCollisionBox->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
 	LeftHandCollisionBox->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	LeftHandCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
@@ -53,7 +53,7 @@ void ASg1Monster2::BeginPlay()
 	{
 		PawnSensingComp->OnSeePawn.AddDynamic(this, &ASg1Monster2::OnPawnSeen);
 	}
-	// ÄÝ¸®Àü ¹Ú½º ¿À¹ö·¦ ÀÌº¥Æ® ¹ÙÀÎµù
+	// ï¿½Ý¸ï¿½ï¿½ï¿½ ï¿½Ú½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ìºï¿½Æ® ï¿½ï¿½ï¿½Îµï¿½
 	if (RightHandCollisionBox)
 	{
 		RightHandCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ASg1Monster2::OnAttackOverlapBegin);
@@ -113,18 +113,18 @@ void ASg1Monster2::OnPawnSeen(APawn* SeenPawn)
 
 void ASg1Monster2::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	// ¸ó½ºÅÍ ÀÚ½Å°ú Ãæµ¹ÇÏÁö ¾Êµµ·Ï
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½Ú½Å°ï¿½ ï¿½æµ¹ï¿½ï¿½ï¿½ï¿½ ï¿½Êµï¿½ï¿½ï¿½
 	if (OtherActor == this) return;
 
-	// ÇÃ·¹ÀÌ¾î Ä³¸¯ÅÍ¿Í Ãæµ¹Çß´ÂÁö È®ÀÎ
+	// ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ Ä³ï¿½ï¿½ï¿½Í¿ï¿½ ï¿½æµ¹ï¿½ß´ï¿½ï¿½ï¿½ È®ï¿½ï¿½
 	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(OtherActor);
 	if (PlayerCharacter)
 	{
-		// ÀÌ¹Ì ÇÇÇØ¸¦ ÁØ ¾×ÅÍÀÎÁö È®ÀÎ (ÇÑ ¹øÀÇ °ø°Ý¿¡ ¿©·¯ ¹ø ÇÇÇØ¸¦ ÁÖÁö ¾Êµµ·Ï)
+		// ï¿½Ì¹ï¿½ ï¿½ï¿½ï¿½Ø¸ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½ (ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ý¿ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½Ø¸ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Êµï¿½ï¿½ï¿½)
 		if (!HitActors.Contains(OtherActor))
 		{
 			UGameplayStatics::ApplyDamage(PlayerCharacter, MonsterAttackDamage, GetController(), this, UDamageType::StaticClass());
-			HitActors.Add(OtherActor); // ÇÇÇØ¸¦ ÁØ ¾×ÅÍ ¸ñ·Ï¿¡ Ãß°¡
+			HitActors.Add(OtherActor); // ï¿½ï¿½ï¿½Ø¸ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ï¿ï¿½ ï¿½ß°ï¿½
 		}
 	}
 }
@@ -177,27 +177,27 @@ void ASg1Monster2::Chase()
 
 void ASg1Monster2::AttackHitNotify()
 {
-	// °ø°Ý ÄÝ¸®Àü È°¼ºÈ­
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½Ý¸ï¿½ï¿½ï¿½ È°ï¿½ï¿½È­
 	if (RightHandCollisionBox)
 	{
 		RightHandCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-		HitActors.Empty(); // »õ·Î¿î °ø°Ý ½ÃÀÛ ½Ã HitActors ÃÊ±âÈ­
+		HitActors.Empty(); // ï¿½ï¿½ï¿½Î¿ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ HitActors ï¿½Ê±ï¿½È­
 	}
 }
 
 void ASg1Monster2::Attack2HitNotify()
 {
-	// °ø°Ý ÄÝ¸®Àü È°¼ºÈ­
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½Ý¸ï¿½ï¿½ï¿½ È°ï¿½ï¿½È­
 	if (LeftHandCollisionBox)
 	{
 		LeftHandCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-		HitActors.Empty(); // »õ·Î¿î °ø°Ý ½ÃÀÛ ½Ã HitActors ÃÊ±âÈ­
+		HitActors.Empty(); // ï¿½ï¿½ï¿½Î¿ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ HitActors ï¿½Ê±ï¿½È­
 	}
 }
 
 void ASg1Monster2::AttackEndNotify()
 {
-	// °ø°Ý ÄÝ¸®Àü ºñÈ°¼ºÈ­
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½Ý¸ï¿½ï¿½ï¿½ ï¿½ï¿½È°ï¿½ï¿½È­
 	if (RightHandCollisionBox)
 	{
 		RightHandCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -212,7 +212,7 @@ void ASg1Monster2::Attack()
 	if (!AIController || MonsterState == EMonster2State::EMS_Dead) return;
 	AIController->StopMovement();
 
-	// ¸ùÅ¸ÁÖ ¹è¿­¿¡¼­ ·£´ýÇÏ°Ô ¼±ÅÃ
+	// ï¿½ï¿½Å¸ï¿½ï¿½ ï¿½è¿­ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½ï¿½ï¿½ï¿½
 	if (AttackMontages.Num() > 0)
 	{
 		int32 Index = FMath::RandRange(0, AttackMontages.Num() - 1);
@@ -237,7 +237,7 @@ void ASg1Monster2::Attack()
 	}
 	else
 	{
-		// ¸ùÅ¸ÁÖ ¾øÀ½ ¡æ »óÅÂ º¹±¸
+		// ï¿½ï¿½Å¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		if (MonsterState != EMonster2State::EMS_Dead && MonsterState != EMonster2State::EMS_Parried)
 		{
 			MonsterState = EMonster2State::EMS_Chasing;
@@ -265,11 +265,11 @@ void ASg1Monster2::Die()
 
 void ASg1Monster2::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	// ¸ùÅ¸ÁÖ°¡ ³¡³ª´Â Áï½Ã ¾×ÅÍ¸¦ ¼û±â°í ¸ðµç Ãæµ¹À» ºñÈ°¼ºÈ­ÇÏ¿© ¾ø´Â Á¸Àç·Î ¸¸µê
+	// ï¿½ï¿½Å¸ï¿½Ö°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½æµ¹ï¿½ï¿½ ï¿½ï¿½È°ï¿½ï¿½È­ï¿½Ï¿ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	SetActorHiddenInGame(true);
 	SetActorEnableCollision(false);
 
-	// ¾ÈÀüÇÏ°Ô ¼Ò¸êµÇµµ·Ï ¾ÆÁÖ ÂªÀº LifeSpan ¼³Á¤
+	// ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½Ò¸ï¿½Çµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Âªï¿½ï¿½ LifeSpan ï¿½ï¿½ï¿½ï¿½
 	SetLifeSpan(0.1f);
 }
 
@@ -279,12 +279,12 @@ float ASg1Monster2::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 
 	if (MonsterState == EMonster2State::EMS_Dead) return DamageAmount;
 
-	// ÆÐ¸µµÈ »óÅÂ¿¡¼­´Â ¸®Æ÷½ºÆ® µ¥¹ÌÁö¸¸ Çã¿ë
+	// ï¿½Ð¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Â¿ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
 	if (MonsterState == EMonster2State::EMS_Parried)
 	{
 		if (DamageEvent.DamageTypeClass && DamageEvent.DamageTypeClass->IsChildOf(URiposteDamageType::StaticClass()))
 		{
-			// ¸®Æ÷½ºÆ® µ¥¹ÌÁö´Â Ã¼·ÂÀ» °¨¼Ò½ÃÅ´
+			// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ã¼ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ò½ï¿½Å´
 			Health = FMath::Clamp(Health - DamageAmount, 0.f, MaxHealth);
 			if (Health <= 0.f)
 			{
@@ -294,7 +294,7 @@ float ASg1Monster2::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 		}
 		else
 		{
-			// ´Ù¸¥ ¸ðµç µ¥¹ÌÁö´Â ¹«½Ã
+			// ï¿½Ù¸ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 			return 0.f;
 		}
 	}
@@ -306,13 +306,13 @@ float ASg1Monster2::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 		return DamageAmount;
 	}
 
-	// ±âÁ¸¿¡ ½ÇÇà ÁßÀÌ´ø '°æÁ÷ ÇØÁ¦' Å¸ÀÌ¸Ó°¡ ÀÖ´Ù¸é Ãë¼Ò.
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì´ï¿½ 'ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½' Å¸ï¿½Ì¸Ó°ï¿½ ï¿½Ö´Ù¸ï¿½ ï¿½ï¿½ï¿½.
 	GetWorldTimerManager().ClearTimer(StunResetTimerHandle);
 
-	// °ø°Ý ÁßÀÌ¾ú´Ù¸é °ø°Ý Å¸ÀÌ¸Óµµ Ãë¼Ò.
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì¾ï¿½ï¿½Ù¸ï¿½ ï¿½ï¿½ï¿½ï¿½ Å¸ï¿½Ì¸Óµï¿½ ï¿½ï¿½ï¿½.
 	GetWorldTimerManager().ClearTimer(AttackTimerHandle);
 
-	// »óÅÂ¸¦ Stunned·Î ¼³Á¤ (ÀÌ¹Ì Stunned »óÅÂ¿´¾îµµ ´Ù½Ã ¼³Á¤)
+	// ï¿½ï¿½ï¿½Â¸ï¿½ Stunnedï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½Ì¹ï¿½ Stunned ï¿½ï¿½ï¿½Â¿ï¿½ï¿½îµµ ï¿½Ù½ï¿½ ï¿½ï¿½ï¿½ï¿½)
 	MonsterState = EMonster2State::EMS_Stunned;
 
 	OnDamaged_BP();
@@ -326,15 +326,15 @@ float ASg1Monster2::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && HitMontage)
 	{
-		// ÇÇ°Ý ¸ùÅ¸ÁÖ¸¦ Ã³À½ºÎÅÍ ´Ù½Ã Àç»ý (±âÁ¸¿¡ Àç»ýÁßÀÌ¾ú´Ù¸é Áß´ÜÇÏ°í »õ·Î ½ÃÀÛ)
+		// ï¿½Ç°ï¿½ ï¿½ï¿½Å¸ï¿½Ö¸ï¿½ Ã³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ù½ï¿½ ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¾ï¿½ï¿½Ù¸ï¿½ ï¿½ß´ï¿½ï¿½Ï°ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
 		const float MontageLength = AnimInstance->Montage_Play(HitMontage, 1.0f);
 
-		// »õ·Î¿î '°æÁ÷ ÇØÁ¦' Å¸ÀÌ¸Ó ¼³Á¤
+		// ï¿½ï¿½ï¿½Î¿ï¿½ 'ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½' Å¸ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½ï¿½
 		GetWorld()->GetTimerManager().SetTimer(StunResetTimerHandle, this, &ASg1Monster2::ResetState, MontageLength, false);
 	}
 	else
 	{
-		// ¸ùÅ¸ÁÖ°¡ ¾øÀ¸¸é ¹Ù·Î »óÅÂ ¸®¼Â
+		// ï¿½ï¿½Å¸ï¿½Ö°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ù·ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		ResetState();
 	}
 
@@ -399,7 +399,7 @@ void ASg1Monster2::Sidestep()
 
 	float CurrentTime = GetWorld()->GetTimeSeconds();
 	if (CurrentTime - LastSidestepTime < SidestepCooldown)
-		return; // ¾ÆÁ÷ ÄðÅ¸ÀÓÀÌ ¾È Áö³µÀ¸¸é ¹«½Ã
+		return; // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Å¸ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
 	LastSidestepTime = CurrentTime;
 
@@ -407,21 +407,21 @@ void ASg1Monster2::Sidestep()
 
 	if (Distance >= 500.f && Distance <= 700.f)
 	{
-		// ÇÃ·¹ÀÌ¾î À§Ä¡¸¦ ±âÁØÀ¸·Î ¿ÞÂÊ º¤ÅÍ ¹æÇâ ±¸ÇÏ±â
+		// ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½Ä¡ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ï±ï¿½
 		FVector ToPlayer = (Player->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-		FVector LeftDirection = FVector::CrossProduct(FVector::UpVector, ToPlayer); // ¿À¸¥¼Õ ÁÂÇ¥°è ±âÁØ ¿ÞÂÊ
+		FVector LeftDirection = FVector::CrossProduct(FVector::UpVector, ToPlayer); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ç¥ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
-		FVector SidestepTarget = GetActorLocation() + LeftDirection * 100.f; // ¿·À¸·Î 100À¯´Ö ÀÌµ¿
+		FVector SidestepTarget = GetActorLocation() + LeftDirection * 100.f; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 100ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½
 
 		FRotator LookAtRot = (Player->GetActorLocation() - GetActorLocation()).Rotation();
-		SetActorRotation(FRotator(0.f, LookAtRot.Yaw, 0.f)); // ÇÃ·¹ÀÌ¾î ¹Ù¶óº¸±â
+		SetActorRotation(FRotator(0.f, LookAtRot.Yaw, 0.f)); // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½Ù¶óº¸±ï¿½
 
-		// ÀÌµ¿ ¸í·É
+		// ï¿½Ìµï¿½ ï¿½ï¿½ï¿½ï¿½
 		AIController->MoveToLocation(SidestepTarget);
 
 		MonsterState = EMonster2State::EMS_Sidestep;
 
-		// ÇÊ¿äÇÏ¸é ¾Ö´Ï¸ÞÀÌ¼Çµµ Àç»ý
+		// ï¿½Ê¿ï¿½ï¿½Ï¸ï¿½ ï¿½Ö´Ï¸ï¿½ï¿½Ì¼Çµï¿½ ï¿½ï¿½ï¿½
 		if (SidestepMontage)
 		{
 			UAnimInstance* Anim = GetMesh()->GetAnimInstance();
@@ -431,7 +431,7 @@ void ASg1Monster2::Sidestep()
 			}
 		}
 		
-		// »óÅÂ ¸®¼Â ¿¹¾à
+		// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		GetWorldTimerManager().SetTimer(AttackTimerHandle, this, &ASg1Monster2::ResetState, 1.5f, false);
 	}
 }
