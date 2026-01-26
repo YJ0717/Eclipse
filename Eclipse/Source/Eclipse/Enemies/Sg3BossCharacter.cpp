@@ -18,6 +18,7 @@ ASg3BossCharacter::ASg3BossCharacter()
 	CurrentAIState = ESg3BossState::Watching;
 	bIsCharging = false;
 	bIsAttacking = false;
+	bIsChargeAttacking = false; // 돌진공격 플래그 초기화
 
 	CurrentHealth = MaxHealth;
 
@@ -81,8 +82,8 @@ void ASg3BossCharacter::Tick(float DeltaTime)
 
 	if (bIsDead) return;
 
-	// World2Boss 완전 복사: bIsAttacking일 때 스킵
-	if (bIsAttacking)
+	// World2Boss 방식: 일반 공격일 때만 완전 스킵
+	if (bIsAttacking && !bIsChargeAttacking)
 	{
 		return;
 	}
@@ -90,14 +91,21 @@ void ASg3BossCharacter::Tick(float DeltaTime)
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Yellow, 
-			FString::Printf(TEXT("Current State: %s"), *UEnum::GetValueAsString(CurrentAIState)));
+			FString::Printf(TEXT("State: %s | Charging: %s"), 
+			*UEnum::GetValueAsString(CurrentAIState),
+			bIsChargeAttacking ? TEXT("YES") : TEXT("NO")));
 		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, 
 			FString::Printf(TEXT("Boss HP: %f"), CurrentHealth));
 	}
 
 	if (PlayerCharacter)
 	{
-		FacePlayer(DeltaTime);
+		// 돌진공격 중에는 회전 고정 (처음에 플레이어 방향으로 고정했으니 유지)
+		if (!bIsChargeAttacking)
+		{
+			FacePlayer(DeltaTime);
+		}
+		
 		ExecuteState(DeltaTime);
 	}
 }
@@ -113,17 +121,32 @@ void ASg3BossCharacter::FacePlayer(float DeltaTime)
 
 void ASg3BossCharacter::MakeDecision()
 {
-	// World2Boss 완전 복사
+	// 공격 중이거나 돌진공격 중이면 의사결정 안함
 	if (bIsDead || CurrentAIState == ESg3BossState::Attacking || 
-		CurrentAIState == ESg3BossState::BackingOff || bIsCharging || bIsAttacking) 
+		CurrentAIState == ESg3BossState::BackingOff || 
+		CurrentAIState == ESg3BossState::ChargeAttacking || // 돌진공격 중 체크 추가!
+		bIsCharging || bIsAttacking || bIsChargeAttacking) 
 		return;
 
 	float Distance = GetDistanceTo(PlayerCharacter);
 
-	// World2Boss 로직 완전 복사!
-	if (Distance <= AttackRange)
+	// 돌진공격 거리: 매우 멀 때 (1000 이상)
+	if (Distance >= ChargeAttackDistance)
 	{
-		// 80% 확률로 공격, 15% 확률로 선회, 5% 확률로 후퇴
+		// 50% 확률로 돌진공격
+		if (FMath::RandRange(0, 100) < 50)
+		{
+			PerformChargeAttack();
+			return; // 돌진공격 시작하면 의사결정 종료
+		}
+		else
+		{
+			CurrentAIState = ESg3BossState::Approaching;
+		}
+	}
+	// 근거리
+	else if (Distance <= AttackRange)
+	{
 		int32 RandVal = FMath::RandRange(0, 100);
 		if (RandVal < 80)
 		{
@@ -139,9 +162,9 @@ void ASg3BossCharacter::MakeDecision()
 			CurrentAIState = ESg3BossState::BackingOff;
 		}
 	}
+	// 원거리
 	else if (Distance > RepositionDistance)
 	{
-		// 멀리 있으면 80% 확률로 접근
 		if (FMath::RandRange(0, 100) < 80)
 		{
 			CurrentAIState = ESg3BossState::Approaching;
@@ -151,9 +174,9 @@ void ASg3BossCharacter::MakeDecision()
 			CurrentAIState = ESg3BossState::Watching;
 		}
 	}
+	// 중간 거리
 	else
 	{
-		// 중간 거리: 다양한 행동
 		int32 RandVal = FMath::RandRange(0, 100);
 		if (RandVal < 50)
 		{
@@ -197,7 +220,6 @@ void ASg3BossCharacter::ExecuteState(float DeltaTime)
 	}
 	else
 	{
-		// World2Boss switch문 완전 복사!
 		FVector MoveDirection = FVector::ZeroVector;
 
 		switch (CurrentAIState)
@@ -235,6 +257,16 @@ void ASg3BossCharacter::ExecuteState(float DeltaTime)
 					}, RetreatDuration, false);
 				}
 				break;
+
+			case ESg3BossState::ChargeAttacking:
+				// 돌진공격 중에는 전방으로 돌진!
+				if (bIsChargeAttacking)
+				{
+					GetCharacterMovement()->MaxWalkSpeed = ChargeAttackSpeed;
+					MoveDirection = GetActorForwardVector();
+					AddMovementInput(MoveDirection);
+				}
+				break;
 		}
 	}
 }
@@ -249,7 +281,6 @@ void ASg3BossCharacter::PerformAttack()
 
 	bIsAttacking = true;
 
-	// 랜덤으로 공격1 또는 공격2 선택
 	int32 Index = FMath::RandRange(0, AttackMontages.Num() - 1);
 	UAnimMontage* AttackToPlay = AttackMontages[Index];
 
@@ -262,7 +293,6 @@ void ASg3BossCharacter::PerformAttack()
 
 	UE_LOG(LogTemp, Warning, TEXT("========== PerformAttack: Playing '%s' =========="), *AttackToPlay->GetName());
 
-	// World2Boss 방식으로 재생
 	PlayAnimMontage(AttackToPlay);
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -280,15 +310,57 @@ void ASg3BossCharacter::PerformAttack()
 	}
 }
 
+void ASg3BossCharacter::PerformChargeAttack()
+{
+	if (!ChargeAttackMontage || bIsDead)
+	{
+		UE_LOG(LogTemp, Error, TEXT("PerformChargeAttack FAILED: ChargeAttackMontage=%s"), 
+			ChargeAttackMontage ? TEXT("Valid") : TEXT("NULL"));
+		return;
+	}
+
+	bIsChargeAttacking = true;
+	bIsAttacking = true;
+	CurrentAIState = ESg3BossState::ChargeAttacking;
+
+	// 플레이어 방향으로 회전 고정
+	FVector DirectionToPlayer = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+	FRotator ChargeRotation = DirectionToPlayer.Rotation();
+	SetActorRotation(FRotator(0.0f, ChargeRotation.Yaw, 0.0f));
+
+	UE_LOG(LogTemp, Warning, TEXT("========== PerformChargeAttack: Starting! =========="));
+
+	// 돌진공격 몽타주 재생
+	PlayAnimMontage(ChargeAttackMontage);
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance)
+	{
+		FOnMontageEnded MontageEndedDelegate;
+		MontageEndedDelegate.BindUObject(this, &ASg3BossCharacter::OnAttackMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, ChargeAttackMontage);
+	}
+
+	// 타이머 제거! NotifyState가 알아서 처리함
+}
+
 void ASg3BossCharacter::OnChargeEnd()
 {
 	bIsCharging = false;
 	CurrentAIState = ESg3BossState::Watching;
 }
 
+void ASg3BossCharacter::StopChargeAttack()
+{
+	UE_LOG(LogTemp, Warning, TEXT("StopChargeAttack: Stopping charge movement NOW!"));
+	bIsChargeAttacking = false;
+	// 상태는 유지 (몽타주가 끝날 때 AttackCooldown으로 전환됨)
+}
+
 void ASg3BossCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	UE_LOG(LogTemp, Warning, TEXT("========== OnAttackMontageEnded CALLED! bInterrupted=%s =========="), 
+	UE_LOG(LogTemp, Warning, TEXT("========== OnAttackMontageEnded CALLED! Montage=%s, bInterrupted=%s =========="), 
+		Montage ? *Montage->GetName() : TEXT("NULL"),
 		bInterrupted ? TEXT("true") : TEXT("false"));
 
 	if (bIsDead) return;
@@ -298,6 +370,13 @@ void ASg3BossCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterr
 	{
 		UE_LOG(LogTemp, Warning, TEXT("OnAttackMontageEnded: Already in cooldown, ignoring"));
 		return;
+	}
+
+	// 돌진공격이었으면 플래그 초기화
+	if (bIsChargeAttacking)
+	{
+		bIsChargeAttacking = false;
+		UE_LOG(LogTemp, Warning, TEXT("OnAttackMontageEnded: ChargeAttack ended"));
 	}
 
 	bIsAttacking = false;
@@ -377,7 +456,13 @@ void ASg3BossCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent
 	APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor);
 	if (Player)
 	{
-		UGameplayStatics::ApplyDamage(Player, AttackDamage, GetController(), this, UDamageType::StaticClass());
+		// 돌진공격 중이면 더 큰 데미지!
+		float Damage = bIsChargeAttacking ? ChargeAttackDamage : AttackDamage;
+		
+		UE_LOG(LogTemp, Warning, TEXT("Boss3 hit player! Damage: %.1f (ChargeAttack: %s)"), 
+			Damage, bIsChargeAttacking ? TEXT("YES") : TEXT("NO"));
+		
+		UGameplayStatics::ApplyDamage(Player, Damage, GetController(), this, UDamageType::StaticClass());
 		HitActors.Add(Player);
 	}
 }
