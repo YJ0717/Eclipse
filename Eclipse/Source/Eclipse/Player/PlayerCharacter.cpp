@@ -17,6 +17,7 @@
 #include "Enemies/Sg2Monster3.h"
 #include "Enemies/Sg2Monster4.h"
 #include "Enemies/Sg1BossCharacter.h"
+#include "Enemies/Sg3BossCharacter.h"
 #include "World2Boss/World2AIBossCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Engine/Engine.h"
@@ -834,6 +835,20 @@ void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent,
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
 		}
 	}
+
+	// Sg3Boss와의 충돌 처리
+	ASg3BossCharacter* Sg3Boss = Cast<ASg3BossCharacter>(OtherActor);
+	if (Sg3Boss && !HitActors.Contains(Sg3Boss))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Player's weapon hit Sg3Boss: %s"), *Sg3Boss->GetName());
+		UGameplayStatics::ApplyDamage(Sg3Boss, AttackDamage, GetController(), this, UDamageType::StaticClass());
+		HitActors.Add(OtherActor);
+
+		if (ImpactEffect)
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
+		}
+	}
 }
 
 bool APlayerCharacter::IsParryWindowActive() const
@@ -1022,8 +1037,9 @@ void APlayerCharacter::UpdateCameraByNearbyEnemies(float DeltaTime)
 		ASg1Monster1::StaticClass(),
 		ASg1Monster2::StaticClass(),
 		ASg2Monster3::StaticClass(),
-		ASg1Monster1::StaticClass(),
+		ASg2Monster4::StaticClass(),
 		AWorld2AIBossCharacter::StaticClass(),
+		ASg3BossCharacter::StaticClass(),
 		// 필요한 적들 계속 추가
 	};
 
