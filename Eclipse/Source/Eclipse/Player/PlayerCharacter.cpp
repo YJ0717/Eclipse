@@ -18,6 +18,7 @@
 #include "Enemies/Sg2Monster4.h"
 #include "Enemies/Sg1BossCharacter.h"
 #include "Enemies/Sg3BossCharacter.h"
+#include "Enemies/Sg4BossCharacter.h"
 #include "World2Boss/World2AIBossCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Engine/Engine.h"
@@ -525,7 +526,7 @@ void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 		GetWorld()->GetTimerManager().SetTimer(DodgeEndTimerHandle, this, &APlayerCharacter::ResetDodgeState, 0.1f, false);
 	}
 	// HitMontage는 OnHitAnimationEnded에서 처리되므로 여기서는 일반적인 입력 활성화 로직을 제거합니다.
-	// 다른 몽타주가 끝났을 때만 입력 활성화
+	// 다른 몬타주가 끝났을 때만 입력 활성화
 	else if (Montage != HitMontage && Montage != DeathMontage && Montage != ParryMontage && Montage != HealMontage) // ParryMontage도 추가
 	{
 		if (APlayerController* PC = Cast<APlayerController>(GetController()))
@@ -849,6 +850,20 @@ void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent,
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
 		}
 	}
+
+	// Sg4Boss와의 충돌 처리
+	ASg4BossCharacter* Sg4Boss = Cast<ASg4BossCharacter>(OtherActor);
+	if (Sg4Boss && !HitActors.Contains(Sg4Boss))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Player's weapon hit Sg4Boss: %s"), *Sg4Boss->GetName());
+		UGameplayStatics::ApplyDamage(Sg4Boss, AttackDamage, GetController(), this, UDamageType::StaticClass());
+		HitActors.Add(OtherActor);
+
+		if (ImpactEffect)
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
+		}
+	}
 }
 
 bool APlayerCharacter::IsParryWindowActive() const
@@ -949,7 +964,7 @@ void APlayerCharacter::OnHealMontageEnded(UAnimMontage* Montage, bool bInterrupt
 		}
 	}
 }
-void APlayerCharacter::InitializeTraits()//현재 쓰지는 않지만 나중에 죽고 정렬시킬때 쓸수도있어서 남겨둠
+void APlayerCharacter::InitializeTraits()//현재 쓰지지는 않지만 나중에 죽고 정렬시킬때 쓸수도있어서 남겨둠
 {
 	AllTraits.Empty();
 
@@ -1040,6 +1055,7 @@ void APlayerCharacter::UpdateCameraByNearbyEnemies(float DeltaTime)
 		ASg2Monster4::StaticClass(),
 		AWorld2AIBossCharacter::StaticClass(),
 		ASg3BossCharacter::StaticClass(),
+		ASg4BossCharacter::StaticClass(),
 		// 필요한 적들 계속 추가
 	};
 

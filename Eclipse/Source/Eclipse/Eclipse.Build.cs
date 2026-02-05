@@ -19,7 +19,8 @@ public class Eclipse : ModuleRules
 		"NavigationSystem",
 		"StateTreeModule",
 		"GameplayStateTreeModule",
-		"UMG"
+		"UMG",
+		"Niagara"  // Niagara 모듈 추가!
 	});
 
         PrivateDependencyModuleNames.AddRange(new string[] { 
