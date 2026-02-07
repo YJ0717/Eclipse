@@ -5,9 +5,12 @@
 #include "GameFramework/Actor.h"
 #include "BossRoomManager.generated.h"
 
-class ASg1BossCharacter;
 class APortal;
 
+/**
+ * 범용 보스룸 매니저
+ * 어떤 보스든 죽으면 포탈을 생성합니다
+ */
 UCLASS()
 class ECLIPSE_API ABossRoomManager : public AActor
 {
@@ -20,23 +23,27 @@ protected:
     virtual void BeginPlay() override;
 
 private:
-    // The class of Portal to spawn after the boss is defeated.
+    // 포탈 클래스
     UPROPERTY(EditAnywhere, Category = "BossRoomManager")
     TSubclassOf<APortal> PortalClass;
 
-    // The transform where the portal will be spawned.
+    // 포탈 생성 위치
     UPROPERTY(EditAnywhere, Category = "BossRoomManager")
     FTransform PortalSpawnTransform;
 
-    // The name of the level to load when the portal is used.
+    // 다음 레벨 이름
     UPROPERTY(EditAnywhere, Category = "BossRoomManager")
     FName NextLevelName;
 
-    // A reference to the boss in the level.
-    UPROPERTY()
-    ASg1BossCharacter* BossCharacter;
+    // 이 방의 보스 액터 (레벨에 배치된 보스를 여기에 할당)
+    UPROPERTY(EditInstanceOnly, Category = "BossRoomManager")
+    AActor* BossActor;
 
-    // Function to be called when the boss dies.
-    UFUNCTION()
-    void OnBossDiedHandler(ASg1BossCharacter* DeadBoss);
+    // 포탈이 이미 생성되었는지 추적
+    bool bPortalSpawned = false;
+
+public:
+    // 보스가 죽었을 때 외부에서 호출할 함수
+    UFUNCTION(BlueprintCallable, Category = "BossRoomManager")
+    void OnBossDefeated();
 };

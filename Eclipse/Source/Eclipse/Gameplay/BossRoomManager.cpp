@@ -1,6 +1,5 @@
 // BossRoomManager.cpp
 #include "BossRoomManager.h"
-#include "Sg1BossCharacter.h"
 #include "Portal.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -13,23 +12,25 @@ void ABossRoomManager::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Find the boss character in the level
-    BossCharacter = Cast<ASg1BossCharacter>(UGameplayStatics::GetActorOfClass(GetWorld(), ASg1BossCharacter::StaticClass()));
-
-    if (BossCharacter)
+    if (!BossActor)
     {
-        // Bind our handler to the boss's OnBossDied event
-        BossCharacter->OnBossDied.AddDynamic(this, &ABossRoomManager::OnBossDiedHandler);
+        UE_LOG(LogTemp, Error, TEXT("BossRoomManager: BossActor is not assigned! Please assign the boss in the level."));
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("BossRoomManager: Could not find ASg1BossCharacter in the level."));
+        UE_LOG(LogTemp, Warning, TEXT("BossRoomManager: Monitoring boss '%s'"), *BossActor->GetName());
     }
 }
 
-void ABossRoomManager::OnBossDiedHandler(ASg1BossCharacter* DeadBoss)
+void ABossRoomManager::OnBossDefeated()
 {
-    UE_LOG(LogTemp, Log, TEXT("Boss has died. Spawning portal."));
+    if (bPortalSpawned)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("BossRoomManager: Portal already spawned, ignoring."));
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("BossRoomManager: Boss defeated! Spawning portal."));
 
     if (PortalClass)
     {
@@ -37,10 +38,16 @@ void ABossRoomManager::OnBossDiedHandler(ASg1BossCharacter* DeadBoss)
         if (SpawnedPortal)
         {
             SpawnedPortal->LevelToLoad = NextLevelName;
+            bPortalSpawned = true;
+            UE_LOG(LogTemp, Warning, TEXT("BossRoomManager: Portal spawned successfully! Next level: %s"), *NextLevelName.ToString());
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("BossRoomManager: Failed to spawn portal!"));
         }
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("BossRoomManager: PortalClass is not set. Cannot spawn portal."));
+        UE_LOG(LogTemp, Warning, TEXT("BossRoomManager: PortalClass is not set."));
     }
 }
