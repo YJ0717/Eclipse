@@ -526,7 +526,7 @@ void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 		GetWorld()->GetTimerManager().SetTimer(DodgeEndTimerHandle, this, &APlayerCharacter::ResetDodgeState, 0.1f, false);
 	}
 	// HitMontage는 OnHitAnimationEnded에서 처리되므로 여기서는 일반적인 입력 활성화 로직을 제거합니다.
-	// 다른 몬타주가 끝났을 때만 입력 활성화
+	// 다른 몽타주가 끝났을 때만 입력 활성화
 	else if (Montage != HitMontage && Montage != DeathMontage && Montage != ParryMontage && Montage != HealMontage) // ParryMontage도 추가
 	{
 		if (APlayerController* PC = Cast<APlayerController>(GetController()))
@@ -850,7 +850,6 @@ void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent,
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
 		}
 	}
-
 	// Sg4Boss와의 충돌 처리
 	ASg4BossCharacter* Sg4Boss = Cast<ASg4BossCharacter>(OtherActor);
 	if (Sg4Boss && !HitActors.Contains(Sg4Boss))
@@ -864,6 +863,7 @@ void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent,
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
 		}
 	}
+
 }
 
 bool APlayerCharacter::IsParryWindowActive() const
@@ -964,26 +964,24 @@ void APlayerCharacter::OnHealMontageEnded(UAnimMontage* Montage, bool bInterrupt
 		}
 	}
 }
-void APlayerCharacter::InitializeTraits()//현재 쓰지지는 않지만 나중에 죽고 정렬시킬때 쓸수도있어서 남겨둠
+void APlayerCharacter::InitializeTraits()//현재 쓰지는 않지만 나중에 죽고 정렬시킬때 쓸수도있어서 남겨둠
 {
 	AllTraits.Empty();
 
 	
 }
 
-TArray<FTraitData> APlayerCharacter::GetRandomTraits(int32 Count)// 현재 쓰지는 않지만 특성 여러개 되면 사용예정
+TArray<FTraitData> APlayerCharacter::GetRandomTraits(int32 Count)
 {
 	TArray<FTraitData> Result;
-	TArray<int32> UsedIndices;
 
-	while (Result.Num() < Count && Result.Num() < AllTraits.Num())
+	if (AllTraits.Num() == 0 || Count <= 0)
+		return Result;
+
+	for (int32 i = 0; i < Count; ++i)
 	{
-		int32 RandIndex = FMath::RandRange(0, AllTraits.Num() - 1);
-		if (!UsedIndices.Contains(RandIndex))
-		{
-			Result.Add(AllTraits[RandIndex]);
-			UsedIndices.Add(RandIndex);
-		}
+		const int32 RandIndex = FMath::RandRange(0, AllTraits.Num() - 1);
+		Result.Add(AllTraits[RandIndex]);
 	}
 
 	return Result;

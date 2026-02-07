@@ -4,6 +4,8 @@
 #include "Sg1BossCharacter.h"
 #include "Sg2Monster3.h"
 #include "Sg2Monster4.h"
+#include "Sg3BossCharacter.h"
+#include "Sg4BossCharacter.h"
 #include "World2Boss/World2AIBossCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/SphereComponent.h"
@@ -124,8 +126,23 @@ void ACharacterSkillActor::OnSkillOverlap(UPrimitiveComponent* OverlappedCompone
 		HitActors.Add(World2Boss);
 	}
 
-	
+
+	// ===== 보스 3 (World2Boss) =====
+	else if (ASg3BossCharacter* World3Boss = Cast<ASg3BossCharacter>(OtherActor))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Skill] Hit World3Boss: %s"), *World3Boss->GetName());
+		UGameplayStatics::ApplyDamage(World3Boss, Damage, GetInstigatorController(), this, UDamageType::StaticClass());
+		HitActors.Add(World3Boss);
+	}
+
+	else if (ASg4BossCharacter* World4Boss = Cast<ASg4BossCharacter>(OtherActor))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Skill] Hit World3Boss: %s"), *World4Boss->GetName());
+		UGameplayStatics::ApplyDamage(World4Boss, Damage, GetInstigatorController(), this, UDamageType::StaticClass());
+		HitActors.Add(World4Boss);
+	}
 
 	// ? 중복 타격 방지 (한 번만 맞게)
-	CollisionSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Destroy();
+	
 }

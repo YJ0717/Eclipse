@@ -5,6 +5,7 @@
 #include "Components/BoxComponent.h"
 #include "TimerManager.h"
 #include "Components/CapsuleComponent.h"
+#include "Gameplay/BossRoomManager.h"
 
 AWorld2AIBossCharacter::AWorld2AIBossCharacter()
 {
@@ -167,7 +168,7 @@ void AWorld2AIBossCharacter::ExecuteState(float DeltaTime)
     if (CurrentAIState == EBossAIState::Attacking || CurrentAIState == EBossAIState::AttackCooldown)
     {
         GetCharacterMovement()->StopMovementImmediately();
-        
+
         // Attacking 상태이고, 아직 공격을 시작하지 않았다면 공격을 시작합니다.
         if (CurrentAIState == EBossAIState::Attacking && !bIsComboAttacking)
         {
@@ -180,51 +181,51 @@ void AWorld2AIBossCharacter::ExecuteState(float DeltaTime)
         FVector MoveDirection = FVector::ZeroVector;
         switch (CurrentAIState)
         {
-            case EBossAIState::Watching:
-                GetCharacterMovement()->MaxWalkSpeed = 0;
-                break;
+        case EBossAIState::Watching:
+            GetCharacterMovement()->MaxWalkSpeed = 0;
+            break;
 
-            case EBossAIState::Circling:
-                GetCharacterMovement()->MaxWalkSpeed = StrafeSpeed;
-                MoveDirection = GetActorRightVector() * CirclingDirection;
-                AddMovementInput(MoveDirection);
-                break;
+        case EBossAIState::Circling:
+            GetCharacterMovement()->MaxWalkSpeed = StrafeSpeed;
+            MoveDirection = GetActorRightVector() * CirclingDirection;
+            AddMovementInput(MoveDirection);
+            break;
 
-            case EBossAIState::Approaching:
-                if (!bIsCharging)
-                {
-                    bIsCharging = true;
-                    GetCharacterMovement()->MaxWalkSpeed = ChargeSpeed;
-                    GetWorldTimerManager().SetTimer(ChargeTimer, this, &AWorld2AIBossCharacter::OnChargeEnd, ChargeDuration, false);
-                }
-                MoveDirection = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-                AddMovementInput(MoveDirection);
-                break;
+        case EBossAIState::Approaching:
+            if (!bIsCharging)
+            {
+                bIsCharging = true;
+                GetCharacterMovement()->MaxWalkSpeed = ChargeSpeed;
+                GetWorldTimerManager().SetTimer(ChargeTimer, this, &AWorld2AIBossCharacter::OnChargeEnd, ChargeDuration, false);
+            }
+            MoveDirection = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+            AddMovementInput(MoveDirection);
+            break;
 
-            case EBossAIState::BackingOff:
-                GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-                MoveDirection = (GetActorLocation() - PlayerCharacter->GetActorLocation()).GetSafeNormal();
-                AddMovementInput(MoveDirection);
-                if (!GetWorldTimerManager().IsTimerActive(DecisionTimer))
-                {
-                     GetWorldTimerManager().SetTimer(DecisionTimer, [this](){
-                        CurrentAIState = EBossAIState::Watching;
-                        MakeDecision();
+        case EBossAIState::BackingOff:
+            GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+            MoveDirection = (GetActorLocation() - PlayerCharacter->GetActorLocation()).GetSafeNormal();
+            AddMovementInput(MoveDirection);
+            if (!GetWorldTimerManager().IsTimerActive(DecisionTimer))
+            {
+                GetWorldTimerManager().SetTimer(DecisionTimer, [this]() {
+                    CurrentAIState = EBossAIState::Watching;
+                    MakeDecision();
                     }, RetreatDuration, false);
-                }
-                break;
+            }
+            break;
 
-            case EBossAIState::SideDashing:
-                if (!bIsSideDashing)
-                {
-                    bIsSideDashing = true;
-                    GetCharacterMovement()->MaxWalkSpeed = SideDashSpeed;
-                    CirclingDirection = FMath::RandBool() ? 1.0f : -1.0f;
-                    GetWorldTimerManager().SetTimer(SideDashTimer, this, &AWorld2AIBossCharacter::OnSideDashEnd, SideDashDuration, false);
-                }
-                MoveDirection = GetActorRightVector() * CirclingDirection;
-                AddMovementInput(MoveDirection);
-                break;
+        case EBossAIState::SideDashing:
+            if (!bIsSideDashing)
+            {
+                bIsSideDashing = true;
+                GetCharacterMovement()->MaxWalkSpeed = SideDashSpeed;
+                CirclingDirection = FMath::RandBool() ? 1.0f : -1.0f;
+                GetWorldTimerManager().SetTimer(SideDashTimer, this, &AWorld2AIBossCharacter::OnSideDashEnd, SideDashDuration, false);
+            }
+            MoveDirection = GetActorRightVector() * CirclingDirection;
+            AddMovementInput(MoveDirection);
+            break;
         }
     }
 }
@@ -256,6 +257,25 @@ float AWorld2AIBossCharacter::TakeDamage(float DamageAmount, FDamageEvent const&
             RightWeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
             LeftWeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
+            // BossRoomManager에 알림 (World 유효성 체크!)
+            if (UWorld* World = GetWorld())
+            {
+                if (World->IsGameWorld() && !World->bIsTearingDown)
+                {
+                    TArray<AActor*> FoundManagers;
+                    UGameplayStatics::GetAllActorsOfClass(World, ABossRoomManager::StaticClass(), FoundManagers);
+                    for (AActor* Manager : FoundManagers)
+                    {
+                        if (ABossRoomManager* BossManager = Cast<ABossRoomManager>(Manager))
+                        {
+                            BossManager->OnBossDefeated();
+                            UE_LOG(LogTemp, Warning, TEXT("World2Boss: Notified BossRoomManager"));
+                            break;
+                        }
+                    }
+                }
+            }
+            DieUI();
             // 사망 몽타주 재생
             if (DeathMontage)
             {

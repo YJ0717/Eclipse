@@ -8,6 +8,7 @@
 #include "Components/CapsuleComponent.h"
 #include "TimerManager.h"
 #include "Animation/AnimInstance.h"
+#include "Gameplay/BossRoomManager.h"
 
 ASg3BossCharacter::ASg3BossCharacter()
 {
@@ -90,11 +91,11 @@ void ASg3BossCharacter::Tick(float DeltaTime)
 
 	if (GEngine)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Yellow, 
-			FString::Printf(TEXT("State: %s | Charging: %s"), 
-			*UEnum::GetValueAsString(CurrentAIState),
-			bIsChargeAttacking ? TEXT("YES") : TEXT("NO")));
-		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, 
+		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Yellow,
+			FString::Printf(TEXT("State: %s | Charging: %s"),
+				*UEnum::GetValueAsString(CurrentAIState),
+				bIsChargeAttacking ? TEXT("YES") : TEXT("NO")));
+		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red,
 			FString::Printf(TEXT("Boss HP: %f"), CurrentHealth));
 	}
 
@@ -105,7 +106,7 @@ void ASg3BossCharacter::Tick(float DeltaTime)
 		{
 			FacePlayer(DeltaTime);
 		}
-		
+
 		ExecuteState(DeltaTime);
 	}
 }
@@ -122,10 +123,10 @@ void ASg3BossCharacter::FacePlayer(float DeltaTime)
 void ASg3BossCharacter::MakeDecision()
 {
 	// 공격 중이거나 돌진공격 중이면 의사결정 안함
-	if (bIsDead || CurrentAIState == ESg3BossState::Attacking || 
-		CurrentAIState == ESg3BossState::BackingOff || 
+	if (bIsDead || CurrentAIState == ESg3BossState::Attacking ||
+		CurrentAIState == ESg3BossState::BackingOff ||
 		CurrentAIState == ESg3BossState::ChargeAttacking || // 돌진공격 중 체크 추가!
-		bIsCharging || bIsAttacking || bIsChargeAttacking) 
+		bIsCharging || bIsAttacking || bIsChargeAttacking)
 		return;
 
 	float Distance = GetDistanceTo(PlayerCharacter);
@@ -224,49 +225,49 @@ void ASg3BossCharacter::ExecuteState(float DeltaTime)
 
 		switch (CurrentAIState)
 		{
-			case ESg3BossState::Watching:
-				GetCharacterMovement()->MaxWalkSpeed = 0;
-				break;
+		case ESg3BossState::Watching:
+			GetCharacterMovement()->MaxWalkSpeed = 0;
+			break;
 
-			case ESg3BossState::Circling:
-				GetCharacterMovement()->MaxWalkSpeed = StrafeSpeed;
-				MoveDirection = GetActorRightVector() * CirclingDirection;
-				AddMovementInput(MoveDirection);
-				break;
+		case ESg3BossState::Circling:
+			GetCharacterMovement()->MaxWalkSpeed = StrafeSpeed;
+			MoveDirection = GetActorRightVector() * CirclingDirection;
+			AddMovementInput(MoveDirection);
+			break;
 
-			case ESg3BossState::Approaching:
-				if (!bIsCharging)
-				{
-					bIsCharging = true;
-					GetCharacterMovement()->MaxWalkSpeed = ChargeSpeed;
-					GetWorldTimerManager().SetTimer(ChargeTimer, this, &ASg3BossCharacter::OnChargeEnd, ChargeDuration, false);
-				}
-				MoveDirection = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-				AddMovementInput(MoveDirection);
-				break;
+		case ESg3BossState::Approaching:
+			if (!bIsCharging)
+			{
+				bIsCharging = true;
+				GetCharacterMovement()->MaxWalkSpeed = ChargeSpeed;
+				GetWorldTimerManager().SetTimer(ChargeTimer, this, &ASg3BossCharacter::OnChargeEnd, ChargeDuration, false);
+			}
+			MoveDirection = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+			AddMovementInput(MoveDirection);
+			break;
 
-			case ESg3BossState::BackingOff:
-				GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-				MoveDirection = (GetActorLocation() - PlayerCharacter->GetActorLocation()).GetSafeNormal();
-				AddMovementInput(MoveDirection);
-				if (!GetWorldTimerManager().IsTimerActive(DecisionTimer))
-				{
-					GetWorldTimerManager().SetTimer(DecisionTimer, [this](){
-						CurrentAIState = ESg3BossState::Watching;
-						MakeDecision();
+		case ESg3BossState::BackingOff:
+			GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+			MoveDirection = (GetActorLocation() - PlayerCharacter->GetActorLocation()).GetSafeNormal();
+			AddMovementInput(MoveDirection);
+			if (!GetWorldTimerManager().IsTimerActive(DecisionTimer))
+			{
+				GetWorldTimerManager().SetTimer(DecisionTimer, [this]() {
+					CurrentAIState = ESg3BossState::Watching;
+					MakeDecision();
 					}, RetreatDuration, false);
-				}
-				break;
+			}
+			break;
 
-			case ESg3BossState::ChargeAttacking:
-				// 돌진공격 중에는 전방으로 돌진!
-				if (bIsChargeAttacking)
-				{
-					GetCharacterMovement()->MaxWalkSpeed = ChargeAttackSpeed;
-					MoveDirection = GetActorForwardVector();
-					AddMovementInput(MoveDirection);
-				}
-				break;
+		case ESg3BossState::ChargeAttacking:
+			// 돌진공격 중에는 전방으로 돌진!
+			if (bIsChargeAttacking)
+			{
+				GetCharacterMovement()->MaxWalkSpeed = ChargeAttackSpeed;
+				MoveDirection = GetActorForwardVector();
+				AddMovementInput(MoveDirection);
+			}
+			break;
 		}
 	}
 }
@@ -294,14 +295,14 @@ void ASg3BossCharacter::PerformAttack()
 	UE_LOG(LogTemp, Warning, TEXT("========== PerformAttack: Playing '%s' =========="), *AttackToPlay->GetName());
 
 	PlayAnimMontage(AttackToPlay);
-	
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance)
 	{
 		FOnMontageEnded MontageEndedDelegate;
 		MontageEndedDelegate.BindUObject(this, &ASg3BossCharacter::OnAttackMontageEnded);
 		AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, AttackToPlay);
-		
+
 		UE_LOG(LogTemp, Warning, TEXT("PerformAttack: EndDelegate set successfully"));
 	}
 	else
@@ -314,7 +315,7 @@ void ASg3BossCharacter::PerformChargeAttack()
 {
 	if (!ChargeAttackMontage || bIsDead)
 	{
-		UE_LOG(LogTemp, Error, TEXT("PerformChargeAttack FAILED: ChargeAttackMontage=%s"), 
+		UE_LOG(LogTemp, Error, TEXT("PerformChargeAttack FAILED: ChargeAttackMontage=%s"),
 			ChargeAttackMontage ? TEXT("Valid") : TEXT("NULL"));
 		return;
 	}
@@ -359,7 +360,7 @@ void ASg3BossCharacter::StopChargeAttack()
 
 void ASg3BossCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	UE_LOG(LogTemp, Warning, TEXT("========== OnAttackMontageEnded CALLED! Montage=%s, bInterrupted=%s =========="), 
+	UE_LOG(LogTemp, Warning, TEXT("========== OnAttackMontageEnded CALLED! Montage=%s, bInterrupted=%s =========="),
 		Montage ? *Montage->GetName() : TEXT("NULL"),
 		bInterrupted ? TEXT("true") : TEXT("false"));
 
@@ -408,6 +409,25 @@ float ASg3BossCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 			RightWeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 			DieUI();
+
+			// BossRoomManager에 알림 (World 유효성 체크!)
+			if (UWorld* World = GetWorld())
+			{
+				if (World->IsGameWorld() && !World->bIsTearingDown)
+				{
+					TArray<AActor*> FoundManagers;
+					UGameplayStatics::GetAllActorsOfClass(World, ABossRoomManager::StaticClass(), FoundManagers);
+					for (AActor* Manager : FoundManagers)
+					{
+						if (ABossRoomManager* BossManager = Cast<ABossRoomManager>(Manager))
+						{
+							BossManager->OnBossDefeated();
+							UE_LOG(LogTemp, Warning, TEXT("Sg3Boss: Notified BossRoomManager"));
+							break;
+						}
+					}
+				}
+			}
 
 			if (DeathMontage)
 			{
@@ -458,10 +478,10 @@ void ASg3BossCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent
 	{
 		// 돌진공격 중이면 더 큰 데미지!
 		float Damage = bIsChargeAttacking ? ChargeAttackDamage : AttackDamage;
-		
-		UE_LOG(LogTemp, Warning, TEXT("Boss3 hit player! Damage: %.1f (ChargeAttack: %s)"), 
+
+		UE_LOG(LogTemp, Warning, TEXT("Boss3 hit player! Damage: %.1f (ChargeAttack: %s)"),
 			Damage, bIsChargeAttacking ? TEXT("YES") : TEXT("NO"));
-		
+
 		UGameplayStatics::ApplyDamage(Player, Damage, GetController(), this, UDamageType::StaticClass());
 		HitActors.Add(Player);
 	}

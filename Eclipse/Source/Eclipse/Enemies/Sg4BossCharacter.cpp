@@ -8,6 +8,7 @@
 #include "Components/CapsuleComponent.h"
 #include "TimerManager.h"
 #include "Animation/AnimInstance.h"
+#include "Gameplay/BossRoomManager.h"
 
 ASg4BossCharacter::ASg4BossCharacter()
 {
@@ -61,9 +62,9 @@ void ASg4BossCharacter::Tick(float DeltaTime)
 
 	if (GEngine)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan, 
+		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan,
 			FString::Printf(TEXT("Sg4Boss State: %s"), *UEnum::GetValueAsString(CurrentAIState)));
-		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, 
+		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red,
 			FString::Printf(TEXT("Sg4Boss HP: %.1f"), CurrentHealth));
 	}
 
@@ -85,10 +86,10 @@ void ASg4BossCharacter::FacePlayer(float DeltaTime)
 
 void ASg4BossCharacter::MakeDecision()
 {
-	if (bIsDead || CurrentAIState == ESg4BossState::MeleeAttacking || 
+	if (bIsDead || CurrentAIState == ESg4BossState::MeleeAttacking ||
 		CurrentAIState == ESg4BossState::RangedAttacking ||
-		CurrentAIState == ESg4BossState::BackingOff || 
-		bIsCharging || bIsAttacking) 
+		CurrentAIState == ESg4BossState::BackingOff ||
+		bIsCharging || bIsAttacking)
 		return;
 
 	float Distance = GetDistanceTo(PlayerCharacter);
@@ -153,8 +154,8 @@ void ASg4BossCharacter::ExecuteState(float DeltaTime)
 		return;
 	}
 
-	if (CurrentAIState == ESg4BossState::MeleeAttacking || 
-		CurrentAIState == ESg4BossState::RangedAttacking || 
+	if (CurrentAIState == ESg4BossState::MeleeAttacking ||
+		CurrentAIState == ESg4BossState::RangedAttacking ||
 		CurrentAIState == ESg4BossState::AttackCooldown)
 	{
 		GetCharacterMovement()->StopMovementImmediately();
@@ -174,39 +175,39 @@ void ASg4BossCharacter::ExecuteState(float DeltaTime)
 
 		switch (CurrentAIState)
 		{
-			case ESg4BossState::Watching:
-				GetCharacterMovement()->MaxWalkSpeed = 0;
-				break;
+		case ESg4BossState::Watching:
+			GetCharacterMovement()->MaxWalkSpeed = 0;
+			break;
 
-			case ESg4BossState::Circling:
-				GetCharacterMovement()->MaxWalkSpeed = StrafeSpeed;
-				MoveDirection = GetActorRightVector() * CirclingDirection;
-				AddMovementInput(MoveDirection);
-				break;
+		case ESg4BossState::Circling:
+			GetCharacterMovement()->MaxWalkSpeed = StrafeSpeed;
+			MoveDirection = GetActorRightVector() * CirclingDirection;
+			AddMovementInput(MoveDirection);
+			break;
 
-			case ESg4BossState::Approaching:
-				if (!bIsCharging)
-				{
-					bIsCharging = true;
-					GetCharacterMovement()->MaxWalkSpeed = ChargeSpeed;
-					GetWorldTimerManager().SetTimer(ChargeTimer, this, &ASg4BossCharacter::OnChargeEnd, ChargeDuration, false);
-				}
-				MoveDirection = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-				AddMovementInput(MoveDirection);
-				break;
+		case ESg4BossState::Approaching:
+			if (!bIsCharging)
+			{
+				bIsCharging = true;
+				GetCharacterMovement()->MaxWalkSpeed = ChargeSpeed;
+				GetWorldTimerManager().SetTimer(ChargeTimer, this, &ASg4BossCharacter::OnChargeEnd, ChargeDuration, false);
+			}
+			MoveDirection = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+			AddMovementInput(MoveDirection);
+			break;
 
-			case ESg4BossState::BackingOff:
-				GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-				MoveDirection = (GetActorLocation() - PlayerCharacter->GetActorLocation()).GetSafeNormal();
-				AddMovementInput(MoveDirection);
-				if (!GetWorldTimerManager().IsTimerActive(DecisionTimer))
-				{
-					GetWorldTimerManager().SetTimer(DecisionTimer, [this](){
-						CurrentAIState = ESg4BossState::Watching;
-						MakeDecision();
+		case ESg4BossState::BackingOff:
+			GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+			MoveDirection = (GetActorLocation() - PlayerCharacter->GetActorLocation()).GetSafeNormal();
+			AddMovementInput(MoveDirection);
+			if (!GetWorldTimerManager().IsTimerActive(DecisionTimer))
+			{
+				GetWorldTimerManager().SetTimer(DecisionTimer, [this]() {
+					CurrentAIState = ESg4BossState::Watching;
+					MakeDecision();
 					}, RetreatDuration, false);
-				}
-				break;
+			}
+			break;
 		}
 	}
 }
@@ -247,7 +248,7 @@ void ASg4BossCharacter::PerformRangedAttack()
 	if (RangedAttackMontages.Num() == 0 || bIsDead)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Sg4Boss: No ranged attack montages! Skipping attack."));
-		// 몽타주 없어도 쿨다운 진입
+		// 몽타주 있어도 쿨다운 진입
 		CurrentAIState = ESg4BossState::AttackCooldown;
 		GetWorldTimerManager().SetTimer(DecisionTimer, this, &ASg4BossCharacter::MakeDecision, AttackCooldownDuration, false);
 		return;
@@ -290,7 +291,7 @@ void ASg4BossCharacter::FireMagicProjectile()
 	SpawnParams.Instigator = GetInstigator();
 
 	AActor* Projectile = GetWorld()->SpawnActor<AActor>(MagicProjectileClass, SpawnLocation, SpawnRotation, SpawnParams);
-	
+
 	if (Projectile)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Sg4Boss: Magic projectile fired!"));
@@ -339,6 +340,25 @@ float ASg4BossCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 			SwordCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 			DieUI();
+
+			// BossRoomManager에 알림 (World 유효성 체크!)
+			if (UWorld* World = GetWorld())
+			{
+				if (World->IsGameWorld() && !World->bIsTearingDown)
+				{
+					TArray<AActor*> FoundManagers;
+					UGameplayStatics::GetAllActorsOfClass(World, ABossRoomManager::StaticClass(), FoundManagers);
+					for (AActor* Manager : FoundManagers)
+					{
+						if (ABossRoomManager* BossManager = Cast<ABossRoomManager>(Manager))
+						{
+							BossManager->OnBossDefeated();
+							UE_LOG(LogTemp, Warning, TEXT("Sg4Boss: Notified BossRoomManager"));
+							break;
+						}
+					}
+				}
+			}
 
 			if (DeathMontage)
 			{

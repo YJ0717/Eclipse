@@ -1,4 +1,3 @@
-
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
@@ -32,7 +31,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Sg1Boss|Event")
 	FOnBossDiedSignature OnBossDied;
 
-	
+
 
 	ASg1BossCharacter();
 	//피
@@ -80,7 +79,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Sg1Boss|Stats")
 	float TotalCurrentHealth;
 
-	
+
 
 	// 지금 맞은 부위 저장
 	EAttackPart LastHitPart;
@@ -94,7 +93,7 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Sg1Boss|Stats")
 	float CurrentHealth;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sg1Boss|Stats")
 	float AttackDamage = 50.f;
 
@@ -143,14 +142,14 @@ private:
 	// 사망 처리
 	void Die();
 
-	
+
 
 
 	// 공격이 플레이어와 겹쳤을 때 호출될 함수입니다.
 	UFUNCTION()
 	void OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	
+
 
 
 	// 한 번의 공격에 여러 번 데미지가 들어가는 걸 방지하기 위해, 맞은 액터들을 잠시 저장해둘 배열입니다.
@@ -167,4 +166,3 @@ private:
 	// 공격을 시작할 수 있는지 확인합니다.
 	bool CanAttack() const;
 };
-

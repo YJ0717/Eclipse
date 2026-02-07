@@ -31,6 +31,9 @@ enum class EBossAIState : uint8
         virtual void Tick(float DeltaTime) override;
         virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
     
+        UFUNCTION(BlueprintImplementableEvent, Category = "die")
+        void DieUI();
+
     protected:
         virtual void BeginPlay() override;
     

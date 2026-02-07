@@ -1,4 +1,3 @@
-
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Sg1BossCharacter.h"
@@ -9,10 +8,11 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/BoxComponent.h"
 #include "Player/PlayerCharacter.h"
-#include "AIController.h" // AI 컨트롤러를 사용하기 위해 추가
-#include "BrainComponent.h" // 브레인 컴포넌트를 사용하기 위해 추가
+#include "AIController.h"
+#include "BrainComponent.h"
 #include "GameFramework/DamageType.h"
 #include "Engine/DamageEvents.h"
+#include "Gameplay/BossRoomManager.h"
 
 
 
@@ -319,6 +319,19 @@ void ASg1BossCharacter::Die()
     // 보스가 죽었음을 알리는 델리게이트를 호출합니다.
     OnBossDied.Broadcast(this);
 
+    // BossRoomManager에 알립니다
+    TArray<AActor*> FoundManagers;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABossRoomManager::StaticClass(), FoundManagers);
+    for (AActor* Manager : FoundManagers)
+    {
+        if (ABossRoomManager* BossManager = Cast<ABossRoomManager>(Manager))
+        {
+            BossManager->OnBossDefeated();
+            UE_LOG(LogTemp, Warning, TEXT("Sg1Boss: Notified BossRoomManager"));
+            break; // 첫 번째 매니저만 호출
+        }
+    }
+
     // 10초 뒤에 액터를 파괴합니다.
     SetLifeSpan(10.0f);
 }
@@ -400,5 +413,4 @@ EAttackPart ASg1BossCharacter::DetectHitPart(FName BoneName)
     // 기본값 (못 찾았을 경우 머리로 처리)
     return EAttackPart::None;
 }
-
 

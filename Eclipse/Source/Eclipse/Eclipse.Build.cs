@@ -20,8 +20,8 @@ public class Eclipse : ModuleRules
 		"StateTreeModule",
 		"GameplayStateTreeModule",
 		"UMG",
-		"Niagara"  // Niagara 모듈 추가!
-	});
+        "Niagara"
+    });
 
         PrivateDependencyModuleNames.AddRange(new string[] { 
 			"GeometryCollectionEngine",
