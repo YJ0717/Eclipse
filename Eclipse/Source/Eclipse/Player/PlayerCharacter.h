@@ -151,8 +151,9 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "die")
 	void PlayerDieUI();
 
-
-	
+	// 자유 시점 모드 상태
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	bool bIsFreeLookMode;
 
 	//카메라 보간용 함수
 	void UpdateCameraByNearbyEnemies(float DeltaTime);
@@ -185,6 +186,13 @@ protected:
 	void Dodge(const FInputActionValue& Value);
 	void Parry(); // 패링 함수
 	void ToggleGodMode();
+
+	// 자유 시점 토글 함수
+	void ToggleFreeLook();
+	
+	// Noclip 모드 수직 이동
+	void MoveUp(const FInputActionValue& Value);
+	void MoveDown(const FInputActionValue& Value);
 
 	void Skill(const FInputActionValue& Value); // 스킬 함수
 	void Heal(const FInputActionValue& Value); // HP회복
@@ -275,6 +283,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* GodModeAction;
 
+	// 자유 시점 토글 입력 액션
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* FreeLookAction;
+
+	// Noclip 모드 수직 이동 입력 액션
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* MoveUpAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* MoveDownAction;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Input)
 	float TurnRateGamepad;
 
@@ -282,6 +301,9 @@ private:
 	bool bIsRolling;
 	bool bIsGodMode;
 	bool IsParryWindowActive() const;
+
+	// 자유 시점 모드 이전 설정 저장
+	bool bOriginalOrientRotationToMovement;
 
 protected:
 	// 스태미너 관련 변수들
@@ -293,9 +315,7 @@ protected:
 
 	bool bCanRegenStamina;
 
-	// ... 나머지 코드 ...
-
-		/** Called for forwards/backward input */
+	/** Called for forwards/backward input */
 	void MoveForward(float Value);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))

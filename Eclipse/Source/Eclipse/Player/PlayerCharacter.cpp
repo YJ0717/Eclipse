@@ -65,8 +65,6 @@ APlayerCharacter::APlayerCharacter()
 	WeaponCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	WeaponCollisionBox->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
 
-
-
 	// 수정: 기본적으로 모든 것에 대해 무시(Ignore)로 설정
 	WeaponCollisionBox->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	// 수정: Pawn에 대해서는 Overlap으로 설정 (기존 몬스터 타격 로직 유지)
@@ -108,6 +106,10 @@ APlayerCharacter::APlayerCharacter()
 	ParryCameraTimelineComp = CreateDefaultSubobject<UTimelineComponent>(TEXT("ParryCameraTimeline"));
 
 	bIsGodMode = false;
+
+	// 자유 시점 모드 초기화
+	bIsFreeLookMode = false;
+	bOriginalOrientRotationToMovement = true;
 }
 
 void APlayerCharacter::BeginPlay()
@@ -209,6 +211,13 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		// 세이브 입력 바인딩
 		EnhancedInputComponent->BindAction(SaveAction, ETriggerEvent::Started, this, &APlayerCharacter::SavePlayerState);
 		EnhancedInputComponent->BindAction(GodModeAction, ETriggerEvent::Started, this, &APlayerCharacter::ToggleGodMode);
+		
+		// 자유 시점 입력 바인딩
+		EnhancedInputComponent->BindAction(FreeLookAction, ETriggerEvent::Started, this, &APlayerCharacter::ToggleFreeLook);
+		
+		// Noclip 모드 수직 이동 바인딩
+		EnhancedInputComponent->BindAction(MoveUpAction, ETriggerEvent::Triggered, this, &APlayerCharacter::MoveUp);
+		EnhancedInputComponent->BindAction(MoveDownAction, ETriggerEvent::Triggered, this, &APlayerCharacter::MoveDown);
 	}
 }
 
@@ -272,12 +281,25 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 	const FVector2D MovementVector = Value.Get<FVector2D>();
 	if (Controller != nullptr)
 	{
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-		AddMovementInput(ForwardDirection, MovementVector.Y);
-		AddMovementInput(RightDirection, MovementVector.X);
+		// Noclip 모드일 때는 카메라 방향으로 이동
+		if (bIsFreeLookMode)
+		{
+			const FRotator Rotation = Controller->GetControlRotation();
+			const FVector ForwardDirection = FRotationMatrix(Rotation).GetUnitAxis(EAxis::X);
+			const FVector RightDirection = FRotationMatrix(Rotation).GetUnitAxis(EAxis::Y);
+			AddMovementInput(ForwardDirection, MovementVector.Y);
+			AddMovementInput(RightDirection, MovementVector.X);
+		}
+		else
+		{
+			// 일반 모드일 때는 기존 방식 (Yaw만 사용)
+			const FRotator Rotation = Controller->GetControlRotation();
+			const FRotator YawRotation(0, Rotation.Yaw, 0);
+			const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+			const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+			AddMovementInput(ForwardDirection, MovementVector.Y);
+			AddMovementInput(RightDirection, MovementVector.X);
+		}
 	}
 }
 
@@ -288,6 +310,24 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 	{
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
+	}
+}
+
+void APlayerCharacter::MoveUp(const FInputActionValue& Value)
+{
+	// Noclip 모드일 때만 위로 이동
+	if (bIsFreeLookMode && GetCharacterMovement()->MovementMode == MOVE_Flying)
+	{
+		AddMovementInput(FVector::UpVector, 1.0f);
+	}
+}
+
+void APlayerCharacter::MoveDown(const FInputActionValue& Value)
+{
+	// Noclip 모드일 때만 아래로 이동
+	if (bIsFreeLookMode && GetCharacterMovement()->MovementMode == MOVE_Flying)
+	{
+		AddMovementInput(FVector::UpVector, -1.0f);
 	}
 }
 
@@ -526,7 +566,7 @@ void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 		GetWorld()->GetTimerManager().SetTimer(DodgeEndTimerHandle, this, &APlayerCharacter::ResetDodgeState, 0.1f, false);
 	}
 	// HitMontage는 OnHitAnimationEnded에서 처리되므로 여기서는 일반적인 입력 활성화 로직을 제거합니다.
-	// 다른 몽타주가 끝났을 때만 입력 활성화
+	// 다른 몬타주가 끝났을 때만 입력 활성화
 	else if (Montage != HitMontage && Montage != DeathMontage && Montage != ParryMontage && Montage != HealMontage) // ParryMontage도 추가
 	{
 		if (APlayerController* PC = Cast<APlayerController>(GetController()))
@@ -1106,4 +1146,61 @@ void APlayerCharacter::UpdateCameraByNearbyEnemies(float DeltaTime)
 void APlayerCharacter::ReturnToTitle()
 {
 	UGameplayStatics::OpenLevel(GetWorld(), TitleLevelName);
+}
+
+void APlayerCharacter::ToggleFreeLook()
+{
+	bIsFreeLookMode = !bIsFreeLookMode;
+
+	if (bIsFreeLookMode)
+	{
+		// Noclip 자유 비행 모드 활성화
+		GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		bUseControllerRotationYaw = true;
+		bUseControllerRotationPitch = true; // Pitch도 활성화
+		GetCharacterMovement()->bOrientRotationToMovement = false;
+		
+		// 속도 및 감속 설정 (미끄럼 방지)
+		GetCharacterMovement()->MaxFlySpeed = 2000.f;
+		GetCharacterMovement()->BrakingDecelerationFlying = 4000.f; // 빠른 감속
+		GetCharacterMovement()->MaxAcceleration = 4000.f; // 빠른 가속
+
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, TEXT("Noclip Mode: ON (Space: Up, Ctrl: Down)"));
+		}
+	}
+	else
+	{
+		// Noclip 모드 비활성화
+		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		bUseControllerRotationYaw = false;
+		bUseControllerRotationPitch = false;
+		GetCharacterMovement()->bOrientRotationToMovement = true;
+		
+		// 원래 설정으로 복구
+		GetCharacterMovement()->BrakingDecelerationWalking = 2048.f; // 기본값
+		GetCharacterMovement()->MaxAcceleration = 2048.f; // 기본값
+		
+		// 캐릭터를 안전한 위치로 이동
+		FHitResult HitResult;
+		FVector TraceStart = GetActorLocation();
+		FVector TraceEnd = TraceStart - FVector(0, 0, 5000.f); // 아래로 5000cm 추적
+		
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(this);
+		
+		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility, QueryParams))
+		{
+			// 바닥을 찾았으면 그 위에 배치
+			SetActorLocation(HitResult.Location + FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+		}
+
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, TEXT("Noclip Mode: OFF"));
+		}
+	}
 }
