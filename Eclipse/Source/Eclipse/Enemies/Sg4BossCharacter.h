@@ -50,15 +50,14 @@ private:
 	void FacePlayer(float DeltaTime);
 	void MakeDecision();
 	void ExecuteState(float DeltaTime);
-	void PerformMeleeAttack();  // 검 공격
-	void PerformRangedAttack(); // 마법 공격
+	void PerformMeleeAttack();  // 근접 공격
+	void PerformRangedAttack(); // 원거리 공격
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted);
-	void OnChargeEnd();
 
 	UFUNCTION()
 	void OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	
+
 
 protected:
 	// ============================================
@@ -80,9 +79,7 @@ protected:
 	FTimerHandle DecisionTimer;
 	TArray<AActor*> HitActors;
 
-	// 상태 제어 플래그
-	bool bIsCharging;
-	FTimerHandle ChargeTimer;
+	// 선회 방향
 	float CirclingDirection;
 
 protected:
@@ -100,13 +97,10 @@ protected:
 	float RepositionDistance = 700.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
-	float DecisionInterval = 2.0f;
+	float DecisionInterval = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
 	float RetreatDuration = 1.5f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
-	float ChargeDuration = 0.7f;
 
 	// --- AI 속도 파라미터 ---
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
@@ -119,7 +113,7 @@ protected:
 	float ChargeSpeed = 1500.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
-	float RotationSpeed = 5.0f;
+	float RotationSpeed = 12.0f;
 
 	// --- AI 전투 파라미터 ---
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Combat")

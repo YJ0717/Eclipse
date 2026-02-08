@@ -20,4 +20,7 @@ public:
     // 레벨 이동 시 플레이어의 HP를 임시 저장할 변수
     UPROPERTY(BlueprintReadWrite, Category = "SaveGame")
     float PlayerHealthOnTravel = 0.0f;
+    //레벨이동시 스킬현재 무슨스킬인지 저장하는용도
+    UPROPERTY(BlueprintReadWrite, Category = "SkillSave")
+    int32 SkillAttackOnTravel = 0;
 };

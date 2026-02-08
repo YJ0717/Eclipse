@@ -60,7 +60,7 @@ class ECLIPSE_API APlayerCharacter : public ACharacter
 
 public:
 	APlayerCharacter();
-	
+
 	//로그라이크 특성용
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traits")
 	TArray<FTraitData> AllTraits;
@@ -120,7 +120,7 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Weapon")
 	float RiposteDamage = 150.0f;
-	
+
 	//카메라설정;;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	float MinTargetArmLength = 200.f;
@@ -167,7 +167,7 @@ protected:
 	void SavePlayerState();
 	void LoadPlayerState();
 
-	
+
 
 	// 플레이어 사망 처리 함수
 	void Die();
@@ -189,7 +189,7 @@ protected:
 
 	// 자유 시점 토글 함수
 	void ToggleFreeLook();
-	
+
 	// Noclip 모드 수직 이동
 	void MoveUp(const FInputActionValue& Value);
 	void MoveDown(const FInputActionValue& Value);
@@ -216,7 +216,7 @@ protected:
 	UFUNCTION()
 	void OnHitAnimationEnded(UAnimMontage* Montage, bool bInterrupted); // 피격 애니메이션 종료 시 호출
 
-    void ResetDodgeState();
+	void ResetDodgeState();
 
 	// AnimNotify에서 호출될 함수들
 	UFUNCTION(BlueprintCallable)
@@ -294,12 +294,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* MoveDownAction;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Input)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input)
 	float TurnRateGamepad;
 
 private:
 	bool bIsRolling;
+	
 	bool bIsGodMode;
+
 	bool IsParryWindowActive() const;
 
 	// 자유 시점 모드 이전 설정 저장
@@ -371,7 +373,7 @@ protected:
 	UPROPERTY()
 	TArray<AActor*> HitActors;
 
-	
+
 
 	FVector PreviousBladeBaseLocation;
 	FVector PreviousBladeTipLocation;
@@ -383,7 +385,7 @@ protected:
 	float OriginalMaxWalkSpeed;
 
 	// -- 콤보 공격 시스템 --
-	
+
 	// 여러 공격 몽타주들을 순서대로 담을 배열
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	TArray<UAnimMontage*> AttackMontages;

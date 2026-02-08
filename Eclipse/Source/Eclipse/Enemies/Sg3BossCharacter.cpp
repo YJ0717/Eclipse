@@ -15,11 +15,11 @@ ASg3BossCharacter::ASg3BossCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = false;
+	GetCharacterMovement()->RotationRate = FRotator(0.0f, 360.0f, 0.0f); // 회전 속도 설정
 
 	CurrentAIState = ESg3BossState::Watching;
-	bIsCharging = false;
 	bIsAttacking = false;
-	bIsChargeAttacking = false; // 돌진공격 플래그 초기화
+	bIsChargeAttacking = false; // 차지어택 플래그 초기화
 
 	CurrentHealth = MaxHealth;
 
@@ -37,6 +37,7 @@ void ASg3BossCharacter::BeginPlay()
 
 	CurrentHealth = MaxHealth;
 	bIsDead = false;
+	bIsDodging = false;
 
 	PlayerCharacter = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 
@@ -77,14 +78,50 @@ void ASg3BossCharacter::BeginPlay()
 	GetWorldTimerManager().SetTimer(DecisionTimer, this, &ASg3BossCharacter::MakeDecision, 0.5f, false);
 }
 
+void ASg3BossCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	// 모든 타이머 정리
+	if (UWorld* World = GetWorld())
+	{
+		FTimerManager& TimerManager = World->GetTimerManager();
+		TimerManager.ClearTimer(DecisionTimer);
+		TimerManager.ClearTimer(DodgeTimer);
+	}
+
+	// 델리게이트 정리
+	if (RightWeaponCollisionBox)
+	{
+		RightWeaponCollisionBox->OnComponentBeginOverlap.RemoveDynamic(this, &ASg3BossCharacter::OnWeaponOverlap);
+	}
+
+	// 애니메이션 델리게이트 정리
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		if (UAnimInstance* AnimInstance = MeshComp->GetAnimInstance())
+		{
+			AnimInstance->OnMontageEnded.Clear();
+		}
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Sg3Boss: EndPlay - All timers and delegates cleared"));
+}
+
 void ASg3BossCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
 	if (bIsDead) return;
 
-	// World2Boss 방식: 일반 공격일 때만 완전 스킵
+	// World2Boss 처럼: 일반 공격은 회전 멈춤
 	if (bIsAttacking && !bIsChargeAttacking)
+	{
+		return;
+	}
+
+	// 회피 중에는 다른 행동 안함
+	if (bIsDodging)
 	{
 		return;
 	}
@@ -92,16 +129,34 @@ void ASg3BossCharacter::Tick(float DeltaTime)
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Yellow,
-			FString::Printf(TEXT("State: %s | Charging: %s"),
+			FString::Printf(TEXT("State: %s | Charging: %s | Dodging: %s"),
 				*UEnum::GetValueAsString(CurrentAIState),
-				bIsChargeAttacking ? TEXT("YES") : TEXT("NO")));
+				bIsChargeAttacking ? TEXT("YES") : TEXT("NO"),
+				bIsDodging ? TEXT("YES") : TEXT("NO")));
 		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red,
 			FString::Printf(TEXT("Boss HP: %f"), CurrentHealth));
 	}
 
 	if (PlayerCharacter)
 	{
-		// 돌진공격 중에는 회전 고정 (처음에 플레이어 방향으로 고정했으니 유지)
+		// 플레이어가 공격 중인지 확인 (가까운 거리에서 공격 모션)
+		float DistanceToPlayer = GetDistanceTo(PlayerCharacter);
+		if (DistanceToPlayer <= DodgeDetectionRange && !bIsAttacking && !bIsChargeAttacking)
+		{
+			// 플레이어가 공격 중인지 확인
+			UAnimInstance* PlayerAnimInstance = PlayerCharacter->GetMesh()->GetAnimInstance();
+			if (PlayerAnimInstance && PlayerAnimInstance->IsAnyMontagePlaying())
+			{
+				// 30% 확률로 회피
+				if (FMath::RandRange(0, 100) < 30)
+				{
+					PerformDodge();
+					return;
+				}
+			}
+		}
+
+		// 차지어택 중이 아닐 때만 회전
 		if (!bIsChargeAttacking)
 		{
 			FacePlayer(DeltaTime);
@@ -122,23 +177,23 @@ void ASg3BossCharacter::FacePlayer(float DeltaTime)
 
 void ASg3BossCharacter::MakeDecision()
 {
-	// 공격 중이거나 돌진공격 중이면 의사결정 안함
+	// 죽었거나 공격중이거나 회피중이면 판단하지 않음
 	if (bIsDead || CurrentAIState == ESg3BossState::Attacking ||
 		CurrentAIState == ESg3BossState::BackingOff ||
-		CurrentAIState == ESg3BossState::ChargeAttacking || // 돌진공격 중 체크 추가!
-		bIsCharging || bIsAttacking || bIsChargeAttacking)
+		CurrentAIState == ESg3BossState::ChargeAttacking ||
+		bIsAttacking || bIsChargeAttacking || bIsDodging)
 		return;
 
 	float Distance = GetDistanceTo(PlayerCharacter);
 
-	// 돌진공격 거리: 매우 멀 때 (1000 이상)
+	// 차지어택 거리: 아주 멀 때 (1000 이상)
 	if (Distance >= ChargeAttackDistance)
 	{
-		// 50% 확률로 돌진공격
+		// 50% 확률로 차지어택
 		if (FMath::RandRange(0, 100) < 50)
 		{
 			PerformChargeAttack();
-			return; // 돌진공격 시작하면 의사결정 종료
+			return;
 		}
 		else
 		{
@@ -148,20 +203,8 @@ void ASg3BossCharacter::MakeDecision()
 	// 근거리
 	else if (Distance <= AttackRange)
 	{
-		int32 RandVal = FMath::RandRange(0, 100);
-		if (RandVal < 80)
-		{
-			CurrentAIState = ESg3BossState::Attacking;
-		}
-		else if (RandVal < 95)
-		{
-			CurrentAIState = ESg3BossState::Circling;
-			CirclingDirection = FMath::RandBool() ? 1.0f : -1.0f;
-		}
-		else
-		{
-			CurrentAIState = ESg3BossState::BackingOff;
-		}
+		// 근거리에서는 무조건 공격!
+		CurrentAIState = ESg3BossState::Attacking;
 	}
 	// 원거리
 	else if (Distance > RepositionDistance)
@@ -175,20 +218,11 @@ void ASg3BossCharacter::MakeDecision()
 			CurrentAIState = ESg3BossState::Watching;
 		}
 	}
-	// 중간 거리
+	// 중거리
 	else
 	{
 		int32 RandVal = FMath::RandRange(0, 100);
-		if (RandVal < 50)
-		{
-			CurrentAIState = ESg3BossState::Circling;
-			CirclingDirection = FMath::RandBool() ? 1.0f : -1.0f;
-		}
-		else if (RandVal < 70)
-		{
-			CurrentAIState = ESg3BossState::Watching;
-		}
-		else if (RandVal < 85)
+		if (RandVal < 80)
 		{
 			CurrentAIState = ESg3BossState::Approaching;
 		}
@@ -207,6 +241,12 @@ void ASg3BossCharacter::ExecuteState(float DeltaTime)
 	if (bIsDead)
 	{
 		GetCharacterMovement()->StopMovementImmediately();
+		return;
+	}
+
+	// 회피 중에는 다른 행동 안함
+	if (bIsDodging)
+	{
 		return;
 	}
 
@@ -229,38 +269,15 @@ void ASg3BossCharacter::ExecuteState(float DeltaTime)
 			GetCharacterMovement()->MaxWalkSpeed = 0;
 			break;
 
-		case ESg3BossState::Circling:
-			GetCharacterMovement()->MaxWalkSpeed = StrafeSpeed;
-			MoveDirection = GetActorRightVector() * CirclingDirection;
-			AddMovementInput(MoveDirection);
-			break;
-
 		case ESg3BossState::Approaching:
-			if (!bIsCharging)
-			{
-				bIsCharging = true;
-				GetCharacterMovement()->MaxWalkSpeed = ChargeSpeed;
-				GetWorldTimerManager().SetTimer(ChargeTimer, this, &ASg3BossCharacter::OnChargeEnd, ChargeDuration, false);
-			}
+			// ChargeTimer 제거! 계속 추적하도록 수정
+			GetCharacterMovement()->MaxWalkSpeed = ChargeSpeed;
 			MoveDirection = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
 			AddMovementInput(MoveDirection);
 			break;
 
-		case ESg3BossState::BackingOff:
-			GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-			MoveDirection = (GetActorLocation() - PlayerCharacter->GetActorLocation()).GetSafeNormal();
-			AddMovementInput(MoveDirection);
-			if (!GetWorldTimerManager().IsTimerActive(DecisionTimer))
-			{
-				GetWorldTimerManager().SetTimer(DecisionTimer, [this]() {
-					CurrentAIState = ESg3BossState::Watching;
-					MakeDecision();
-					}, RetreatDuration, false);
-			}
-			break;
-
 		case ESg3BossState::ChargeAttacking:
-			// 돌진공격 중에는 전방으로 돌진!
+			// 차지어택 중에는 전진만 계속!
 			if (bIsChargeAttacking)
 			{
 				GetCharacterMovement()->MaxWalkSpeed = ChargeAttackSpeed;
@@ -345,10 +362,37 @@ void ASg3BossCharacter::PerformChargeAttack()
 	// 타이머 제거! NotifyState가 알아서 처리함
 }
 
-void ASg3BossCharacter::OnChargeEnd()
+void ASg3BossCharacter::PerformDodge()
 {
-	bIsCharging = false;
+	if (bIsDead || bIsDodging || !PlayerCharacter) return;
+
+	bIsDodging = true;
+
+	// 좌우 랜덤 방향 결정
+	float DodgeDirection = FMath::RandBool() ? 1.0f : -1.0f;
+	FVector DodgeVector = GetActorRightVector() * DodgeDirection * DodgeDistance;
+	FVector TargetLocation = GetActorLocation() + DodgeVector;
+
+	// 목표 위치로 빠르게 이동
+	GetCharacterMovement()->MaxWalkSpeed = StrafeSpeed * 1.5f; // 회피는 더 빠르게
+	FVector MoveDir = (TargetLocation - GetActorLocation()).GetSafeNormal();
+	AddMovementInput(MoveDir, 1.0f);
+
+	UE_LOG(LogTemp, Warning, TEXT("Boss3: Dodging %s!"), DodgeDirection > 0 ? TEXT("Right") : TEXT("Left"));
+
+	// 회피 종료 타이머
+	GetWorldTimerManager().SetTimer(DodgeTimer, this, &ASg3BossCharacter::OnDodgeEnd, DodgeDuration, false);
+}
+
+void ASg3BossCharacter::OnDodgeEnd()
+{
+	bIsDodging = false;
 	CurrentAIState = ESg3BossState::Watching;
+
+	UE_LOG(LogTemp, Warning, TEXT("Boss3: Dodge ended, back to normal"));
+
+	// 판단 재개
+	GetWorldTimerManager().SetTimer(DecisionTimer, this, &ASg3BossCharacter::MakeDecision, 0.3f, false);
 }
 
 void ASg3BossCharacter::StopChargeAttack()
@@ -402,7 +446,10 @@ float ASg3BossCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 			bIsDead = true;
 			CurrentAIState = ESg3BossState::Dead;
 
+			// 모든 타이머 정리
 			GetWorldTimerManager().ClearTimer(DecisionTimer);
+			GetWorldTimerManager().ClearTimer(DodgeTimer);
+
 			GetCharacterMovement()->StopMovementImmediately();
 
 			GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -447,6 +494,17 @@ float ASg3BossCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 
 void ASg3BossCharacter::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	// 타이머 한 번 더 정리 (안전장치)
+	if (UWorld* World = GetWorld())
+	{
+		if (World->IsGameWorld() && !World->bIsTearingDown)
+		{
+			FTimerManager& TimerManager = World->GetTimerManager();
+			TimerManager.ClearTimer(DecisionTimer);
+			TimerManager.ClearTimer(DodgeTimer);
+		}
+	}
+
 	Destroy();
 }
 

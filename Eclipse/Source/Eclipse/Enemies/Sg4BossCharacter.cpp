@@ -15,9 +15,9 @@ ASg4BossCharacter::ASg4BossCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = false;
+	GetCharacterMovement()->RotationRate = FRotator(0.0f, 360.0f, 0.0f); // 회전 속도 설정
 
 	CurrentAIState = ESg4BossState::Watching;
-	bIsCharging = false;
 	bIsAttacking = false;
 
 	CurrentHealth = MaxHealth;
@@ -89,16 +89,16 @@ void ASg4BossCharacter::MakeDecision()
 	if (bIsDead || CurrentAIState == ESg4BossState::MeleeAttacking ||
 		CurrentAIState == ESg4BossState::RangedAttacking ||
 		CurrentAIState == ESg4BossState::BackingOff ||
-		bIsCharging || bIsAttacking)
+		bIsAttacking)
 		return;
 
 	float Distance = GetDistanceTo(PlayerCharacter);
 
-	// 근거리: 검 공격
+	// 근거리: 근접 공격
 	if (Distance <= MeleeAttackRange)
 	{
 		int32 RandVal = FMath::RandRange(0, 100);
-		if (RandVal < 70) // 70% 검 공격
+		if (RandVal < 70) // 70% 근접 공격
 		{
 			CurrentAIState = ESg4BossState::MeleeAttacking;
 		}
@@ -112,11 +112,11 @@ void ASg4BossCharacter::MakeDecision()
 			CurrentAIState = ESg4BossState::BackingOff;
 		}
 	}
-	// 원거리: 마법 공격
+	// 중거리: 원거리 공격
 	else if (Distance > MeleeAttackRange && Distance <= RangedAttackRange)
 	{
 		int32 RandVal = FMath::RandRange(0, 100);
-		if (RandVal < 60) // 60% 마법 공격
+		if (RandVal < 60) // 60% 원거리 공격
 		{
 			CurrentAIState = ESg4BossState::RangedAttacking;
 		}
@@ -186,12 +186,7 @@ void ASg4BossCharacter::ExecuteState(float DeltaTime)
 			break;
 
 		case ESg4BossState::Approaching:
-			if (!bIsCharging)
-			{
-				bIsCharging = true;
-				GetCharacterMovement()->MaxWalkSpeed = ChargeSpeed;
-				GetWorldTimerManager().SetTimer(ChargeTimer, this, &ASg4BossCharacter::OnChargeEnd, ChargeDuration, false);
-			}
+			GetCharacterMovement()->MaxWalkSpeed = ChargeSpeed;
 			MoveDirection = (PlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
 			AddMovementInput(MoveDirection);
 			break;
@@ -296,12 +291,6 @@ void ASg4BossCharacter::FireMagicProjectile()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Sg4Boss: Magic projectile fired!"));
 	}
-}
-
-void ASg4BossCharacter::OnChargeEnd()
-{
-	bIsCharging = false;
-	CurrentAIState = ESg4BossState::Watching;
 }
 
 void ASg4BossCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)

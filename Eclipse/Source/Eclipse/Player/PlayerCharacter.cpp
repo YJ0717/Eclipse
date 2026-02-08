@@ -50,10 +50,16 @@ APlayerCharacter::APlayerCharacter()
 	CameraBoom->bEnableCameraRotationLag = true;
 	CameraBoom->CameraRotationLagSpeed = 10.0f;
 	CameraBoom->SocketOffset = FVector(0.f, 60.f, 70.f);
+
+	// 카메라 충돌 설정
 	CameraBoom->bDoCollisionTest = true;
+	CameraBoom->ProbeChannel = ECollisionChannel::ECC_Visibility; // Visibility 채널 사용 (Pawn 무시)
+	CameraBoom->ProbeSize = 12.0f;
+
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+
 	AxeComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Axe"));
 	AxeComponent->SetupAttachment(GetMesh(), FName("AxeSocket"));
 	AxeComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -84,7 +90,7 @@ APlayerCharacter::APlayerCharacter()
 	RiposteTarget = nullptr;
 	ParryStartTime = 0.1f;
 	ParryEndTime = 0.4f;
-	
+
 	// 스태미너 변수 초기화
 	MaxStamina = 100.f;
 	CurrentStamina = MaxStamina;
@@ -95,11 +101,11 @@ APlayerCharacter::APlayerCharacter()
 	// HP 변수 초기화
 	MaxHealth = 100.f;
 	CurrentHealth = MaxHealth;
-	
+
 	//에스트관련 초기화
 	MaxEst = 5.f;
 	CurrentEst = MaxEst;
-	
+
 	// 기본 달리기 속도를 600으로 설정합니다. (블루프린트에서 덮어쓸 수 있습니다)
 	GetCharacterMovement()->MaxWalkSpeed = 600.f;
 
@@ -136,29 +142,29 @@ void APlayerCharacter::BeginPlay()
 	// 새로 추가: Hit 이벤트 바인딩
 	WeaponCollisionBox->OnComponentHit.AddDynamic(this, &APlayerCharacter::OnWeaponHit);
 
-    // 화면에 초기 스태미너 값 출력
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Initial Stamina: %.2f / %.2f"), CurrentStamina, MaxStamina));
-        }
-    
-        // --- 게임 로드 로직 추가 ---
-        UEclipseGameInstance* GameInstance = Cast<UEclipseGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-        if (GameInstance)
-        {
-            // "Continue" 버튼으로 게임을 로드하는 경우
-            if (GameInstance->bShouldLoadGame)
-            {
-                LoadPlayerState();
-                GameInstance->bShouldLoadGame = false; // 한 번 로드 후 플래그 리셋
-            }
-            // 포탈을 통해 레벨을 이동한 경우
-            else if (GameInstance->PlayerHealthOnTravel > 0.f)
-            {
-                CurrentHealth = GameInstance->PlayerHealthOnTravel;
-                GameInstance->PlayerHealthOnTravel = 0.f; // 한 번 적용 후 리셋
-            }
-        }
+	// 화면에 초기 스태미너 값 출력
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Initial Stamina: %.2f / %.2f"), CurrentStamina, MaxStamina));
+	}
+
+	// --- 게임 로드 로직 추가 ---
+	UEclipseGameInstance* GameInstance = Cast<UEclipseGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (GameInstance)
+	{
+		// "Continue" 버튼으로 게임을 로드하는 경우
+		if (GameInstance->bShouldLoadGame)
+		{
+			LoadPlayerState();
+			GameInstance->bShouldLoadGame = false; // 한 번 로드 후 플래그 리셋
+		}
+		// 포탈을 통해 레벨을 이동한 경우
+		else if (GameInstance->PlayerHealthOnTravel > 0.f)
+		{
+			CurrentHealth = GameInstance->PlayerHealthOnTravel;
+			GameInstance->PlayerHealthOnTravel = 0.f; // 한 번 적용 후 리셋
+		}
+	}
 }
 // 커스텀 채널 정의 (DefaultEngine.ini 기반)
 #define ECC_OutDestruction ECollisionChannel::ECC_GameTraceChannel2
@@ -166,28 +172,28 @@ void APlayerCharacter::BeginPlay()
 
 void APlayerCharacter::OnWeaponHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-    // 부딪힌 액터가 DestructibleWall인지 확인합니다.
-    ADestructibleWall* Wall = Cast<ADestructibleWall>(OtherActor);
-    if (Wall)
-    {
-        Wall->ApplyDamageAtLocation(Hit.Location, 50.f, 100.f);
-    }
+	// 부딪힌 액터가 DestructibleWall인지 확인합니다.
+	ADestructibleWall* Wall = Cast<ADestructibleWall>(OtherActor);
+	if (Wall)
+	{
+		Wall->ApplyDamageAtLocation(Hit.Location, 50.f, 100.f);
+	}
 
-    // 부딪힌 액터가 PillarDestructible인지 확인합니다.
-    APillarDestructible* Pillar = Cast<APillarDestructible>(OtherActor);
-    if (Pillar)
-    {
-        // 맞은 컴포넌트의 오브젝트 타입으로 겉과 속을 구별
-        ECollisionChannel HitObjectType = OtherComp->GetCollisionObjectType();
-        if (HitObjectType == ECC_OutDestruction)
-        {
-            Pillar->ApplyOuterShellDamage(Hit.ImpactPoint);
-        }
-        else if (HitObjectType == ECC_InnerDestruction)
-        {
-            Pillar->ApplyInnerCoreDamage(Hit.ImpactPoint);
-        }
-    }
+	// 부딪힌 액터가 PillarDestructible인지 확인합니다.
+	APillarDestructible* Pillar = Cast<APillarDestructible>(OtherActor);
+	if (Pillar)
+	{
+		// 맞은 컴포넌트의 오브젝트 타입으로 겉과 속을 구별
+		ECollisionChannel HitObjectType = OtherComp->GetCollisionObjectType();
+		if (HitObjectType == ECC_OutDestruction)
+		{
+			Pillar->ApplyOuterShellDamage(Hit.ImpactPoint);
+		}
+		else if (HitObjectType == ECC_InnerDestruction)
+		{
+			Pillar->ApplyInnerCoreDamage(Hit.ImpactPoint);
+		}
+	}
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -211,10 +217,10 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		// 세이브 입력 바인딩
 		EnhancedInputComponent->BindAction(SaveAction, ETriggerEvent::Started, this, &APlayerCharacter::SavePlayerState);
 		EnhancedInputComponent->BindAction(GodModeAction, ETriggerEvent::Started, this, &APlayerCharacter::ToggleGodMode);
-		
+
 		// 자유 시점 입력 바인딩
 		EnhancedInputComponent->BindAction(FreeLookAction, ETriggerEvent::Started, this, &APlayerCharacter::ToggleFreeLook);
-		
+
 		// Noclip 모드 수직 이동 바인딩
 		EnhancedInputComponent->BindAction(MoveUpAction, ETriggerEvent::Triggered, this, &APlayerCharacter::MoveUp);
 		EnhancedInputComponent->BindAction(MoveDownAction, ETriggerEvent::Triggered, this, &APlayerCharacter::MoveDown);
@@ -240,33 +246,33 @@ void APlayerCharacter::ToggleGodMode()
 
 void APlayerCharacter::ToggleWeapon()
 {
-    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-    if (!AnimInstance || AnimInstance->IsAnyMontagePlaying()) return;
-    UAnimMontage* MontageToPlay = bIsWeaponEquipped ? UnequipMontage : EquipMontage;
-    if (MontageToPlay)
-    {
-        const float PlayRate = AnimInstance->Montage_Play(MontageToPlay);
-        if (PlayRate > 0.f)
-        {
-            if (APlayerController* PC = Cast<APlayerController>(GetController()))
-            {
-                DisableInput(PC);
-            }
-            FOnMontageEnded MontageEndedDelegate;
-            MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnMontageEnded);
-            AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, MontageToPlay);
-            if (bIsWeaponEquipped)
-            {
-                bIsWeaponEquipped = false;
-                AxeComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("AxeSocket"));
-            }
-            else
-            {
-                bIsWeaponEquipped = true;
-                AxeComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HandSocket"));
-            }
-        }
-    }
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (!AnimInstance || AnimInstance->IsAnyMontagePlaying()) return;
+	UAnimMontage* MontageToPlay = bIsWeaponEquipped ? UnequipMontage : EquipMontage;
+	if (MontageToPlay)
+	{
+		const float PlayRate = AnimInstance->Montage_Play(MontageToPlay);
+		if (PlayRate > 0.f)
+		{
+			if (APlayerController* PC = Cast<APlayerController>(GetController()))
+			{
+				DisableInput(PC);
+			}
+			FOnMontageEnded MontageEndedDelegate;
+			MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, MontageToPlay);
+			if (bIsWeaponEquipped)
+			{
+				bIsWeaponEquipped = false;
+				AxeComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("AxeSocket"));
+			}
+			else
+			{
+				bIsWeaponEquipped = true;
+				AxeComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HandSocket"));
+			}
+		}
+	}
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
@@ -371,7 +377,7 @@ void APlayerCharacter::Attack()
 				FVector TargetLocation = GetActorLocation() + GetActorForwardVector() * 120.f;
 				FRotator TargetRotation = (GetActorLocation() - Monster->GetActorLocation()).Rotation();
 				Monster->SetActorLocationAndRotation(TargetLocation, TargetRotation);
-				
+
 				AnimInstance->Montage_Play(RiposteMontage);
 				return; // 리포스트 실행 시 일반 공격 로직은 실행하지 않음
 			}
@@ -384,7 +390,7 @@ void APlayerCharacter::Attack()
 		if (ComboCount == 0)
 		{
 
-			
+
 			if (AttackMontages.IsValidIndex(0))
 			{
 				UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -396,7 +402,7 @@ void APlayerCharacter::Attack()
 					// 현재 속도 가져오기
 					float Speed = GetCharacterMovement()->Velocity.Size();
 					if (Speed >= 600.f) bIsRunningAttack = true;
-					
+
 					// 속도에 따라 재생할 몽타주 선택
 					UAnimMontage* MontageToPlay = (Speed >= 600.f) ? RunAttackMontages[0] : AttackMontages[0];
 
@@ -493,7 +499,7 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 		bCanRegenStamina = false;
 
 		bIsRolling = true;
-		
+
 		OriginalCapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 
 		FVector LastInputDirection = GetCharacterMovement()->GetLastInputVector().GetSafeNormal();
@@ -586,11 +592,11 @@ void APlayerCharacter::Tick(float DeltaTime)
 		CurrentStamina = FMath::Min(MaxStamina, CurrentStamina + StaminaRegenRate * DeltaTime);
 	}
 
-    // 화면에 현재 스태미너 값 출력
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("Current Stamina: %.2f"), CurrentStamina));
-    }
+	// 화면에 현재 스태미너 값 출력
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("Current Stamina: %.2f"), CurrentStamina));
+	}
 
 	// 패링 가능 상태일 때 디버그 스피어 표시
 	if (IsParryWindowActive())
@@ -616,7 +622,7 @@ void APlayerCharacter::Tick(float DeltaTime)
 	// 공격·구르기 중에만 적용
 	if (bIsAttacking || bIsRolling || bIsUsingSkill)
 	{
-		
+
 		FHitResult FloorHit;
 
 
@@ -743,7 +749,7 @@ void APlayerCharacter::Die()
 		SetActorEnableCollision(false);
 		SetLifeSpan(0.1f); // 짧은 수명 설정
 	}
-	
+
 }
 
 void APlayerCharacter::OnDeathAnimationEnded(UAnimMontage* Montage, bool bInterrupted)
@@ -819,7 +825,7 @@ void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent,
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, SweepResult.ImpactPoint, SweepResult.ImpactNormal.Rotation());
 		}
 	}
-	
+
 
 	ASg2Monster4* Monster4 = Cast<ASg2Monster4>(OtherActor);
 	if (Monster4 && !HitActors.Contains(Monster4))
@@ -844,7 +850,7 @@ void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent,
 			Boss,
 			AttackDamage,
 			GetActorForwardVector(),
-			SweepResult,    
+			SweepResult,
 			GetController(),
 			this,
 			UDamageType::StaticClass()
@@ -908,18 +914,18 @@ void APlayerCharacter::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent,
 
 bool APlayerCharacter::IsParryWindowActive() const
 {
-    if (!GetMesh() || !ParryMontage)
-    {
-        return false;
-    }
+	if (!GetMesh() || !ParryMontage)
+	{
+		return false;
+	}
 
-    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-    if (AnimInstance && AnimInstance->Montage_IsPlaying(ParryMontage))
-    {
-        const float CurrentPosition = AnimInstance->Montage_GetPosition(ParryMontage);
-        return CurrentPosition >= ParryStartTime && CurrentPosition <= ParryEndTime;
-    }
-    return false;
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && AnimInstance->Montage_IsPlaying(ParryMontage))
+	{
+		const float CurrentPosition = AnimInstance->Montage_GetPosition(ParryMontage);
+		return CurrentPosition >= ParryStartTime && CurrentPosition <= ParryEndTime;
+	}
+	return false;
 }
 
 void APlayerCharacter::Skill(const FInputActionValue& Value)
@@ -933,16 +939,16 @@ void APlayerCharacter::Skill(const FInputActionValue& Value)
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 		if (AnimInstance && !AnimInstance->IsAnyMontagePlaying())
 		{
-			
+
 			bIsUsingSkill = true;
 
-			
+
 			GetCharacterMovement()->DisableMovement();
 
-			
+
 			AnimInstance->Montage_Play(SkillMontages[SkillAttack]);
 
-			
+
 			FOnMontageEnded MontageEndedDelegate;
 			MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnSkillMontageEnded);
 			AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, SkillMontages[SkillAttack]);
@@ -1008,7 +1014,7 @@ void APlayerCharacter::InitializeTraits()//현재 쓰지는 않지만 나중에 
 {
 	AllTraits.Empty();
 
-	
+
 }
 
 TArray<FTraitData> APlayerCharacter::GetRandomTraits(int32 Count)
@@ -1049,37 +1055,37 @@ void APlayerCharacter::ApplyTrait(const FTraitData& Trait)
 }
 void APlayerCharacter::SavePlayerState()
 {
-    // "MySaveSlot"이라는 이름으로 현재 플레이어의 위치와 HP를 저장합니다.
-    UEclipseSaveGame::SaveGame("MySaveSlot", 0, TEXT("Player1"), GetActorLocation(), CurrentHealth, UGameplayStatics::GetCurrentLevelName(GetWorld()));
+	// "MySaveSlot"이라는 이름으로 현재 플레이어의 위치와 HP를 저장합니다.
+	UEclipseSaveGame::SaveGame("MySaveSlot", 0, TEXT("Player1"), GetActorLocation(), CurrentHealth, UGameplayStatics::GetCurrentLevelName(GetWorld()));
 
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Game Saved! Location: %s, HP: %.1f"), *GetActorLocation().ToString(), CurrentHealth));
-    }
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Game Saved! Location: %s, HP: %.1f"), *GetActorLocation().ToString(), CurrentHealth));
+	}
 }
 
 void APlayerCharacter::LoadPlayerState()
 {
-    // "MySaveSlot"에 저장된 게임 데이터를 불러옵니다.
-    USaveGameData* LoadedGame = UEclipseSaveGame::LoadGame("MySaveSlot", 0);
-    if (LoadedGame)
-    {
-        // 불러온 위치와 HP로 플레이어를 설정합니다.
-        SetActorLocation(LoadedGame->PlayerLocation);
-        CurrentHealth = LoadedGame->PlayerHealth;
+	// "MySaveSlot"에 저장된 게임 데이터를 불러옵니다.
+	USaveGameData* LoadedGame = UEclipseSaveGame::LoadGame("MySaveSlot", 0);
+	if (LoadedGame)
+	{
+		// 불러온 위치와 HP로 플레이어를 설정합니다.
+		SetActorLocation(LoadedGame->PlayerLocation);
+		CurrentHealth = LoadedGame->PlayerHealth;
 
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("Game Loaded! Player moved to: %s, HP set to: %.1f"), *LoadedGame->PlayerLocation.ToString(), CurrentHealth));
-        }
-    }
-    else
-    { 
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("No Save Game found!"));
-        }
-    }
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("Game Loaded! Player moved to: %s, HP set to: %.1f"), *LoadedGame->PlayerLocation.ToString(), CurrentHealth));
+		}
+	}
+	else
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("No Save Game found!"));
+		}
+	}
 }
 
 
@@ -1122,25 +1128,28 @@ void APlayerCharacter::UpdateCameraByNearbyEnemies(float DeltaTime)
 
 	FVector TargetOffset = bIsNearEnemy ? BossSocketOffset : DefaultSocketOffset;
 
-	if (bIsNearEnemy)
+	if (CameraBoom)
 	{
-		CameraBoom->bDoCollisionTest = false;
-		// 몬스터 가까이 있을 때만 Z 위치 제한
-		TargetOffset.Z = FMath::Clamp(TargetOffset.Z, MinZ, MaxZ);
-		
-		TargetOffset.X = FMath::Clamp(TargetOffset.X, MinX, MaxX);
-	}
-	else
-	{
-		
+		// 카메라 충돌 설정: Visibility 채널 사용 (Pawn 무시, 벽만 감지)
 		CameraBoom->bDoCollisionTest = true;
+		CameraBoom->ProbeChannel = ECollisionChannel::ECC_Visibility;
+		CameraBoom->ProbeSize = 12.0f;
+
+		if (bIsNearEnemy)
+		{
+			// 몬스터 가까이 있을 때 Z 위치 제한
+			TargetOffset.Z = FMath::Clamp(TargetOffset.Z, MinZ, MaxZ);
+			TargetOffset.X = FMath::Clamp(TargetOffset.X, MinX, MaxX);
+		}
+
+		// 부드러운 보간으로 카메라 위치 변경
+		CameraBoom->SocketOffset = FMath::VInterpTo(
+			CameraBoom->SocketOffset,
+			TargetOffset,
+			DeltaTime,
+			5.0f
+		);
 	}
-	CameraBoom->SocketOffset = FMath::VInterpTo(
-		CameraBoom->SocketOffset,
-		TargetOffset,
-		DeltaTime,
-		5.0f
-	);
 }
 
 void APlayerCharacter::ReturnToTitle()
@@ -1160,7 +1169,7 @@ void APlayerCharacter::ToggleFreeLook()
 		bUseControllerRotationYaw = true;
 		bUseControllerRotationPitch = true; // Pitch도 활성화
 		GetCharacterMovement()->bOrientRotationToMovement = false;
-		
+
 		// 속도 및 감속 설정 (미끄럼 방지)
 		GetCharacterMovement()->MaxFlySpeed = 2000.f;
 		GetCharacterMovement()->BrakingDecelerationFlying = 4000.f; // 빠른 감속
@@ -1179,19 +1188,19 @@ void APlayerCharacter::ToggleFreeLook()
 		bUseControllerRotationYaw = false;
 		bUseControllerRotationPitch = false;
 		GetCharacterMovement()->bOrientRotationToMovement = true;
-		
+
 		// 원래 설정으로 복구
 		GetCharacterMovement()->BrakingDecelerationWalking = 2048.f; // 기본값
 		GetCharacterMovement()->MaxAcceleration = 2048.f; // 기본값
-		
+
 		// 캐릭터를 안전한 위치로 이동
 		FHitResult HitResult;
 		FVector TraceStart = GetActorLocation();
 		FVector TraceEnd = TraceStart - FVector(0, 0, 5000.f); // 아래로 5000cm 추적
-		
+
 		FCollisionQueryParams QueryParams;
 		QueryParams.AddIgnoredActor(this);
-		
+
 		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility, QueryParams))
 		{
 			// 바닥을 찾았으면 그 위에 배치

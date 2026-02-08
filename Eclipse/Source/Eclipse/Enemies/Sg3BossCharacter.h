@@ -32,8 +32,9 @@ public:
 	ASg3BossCharacter();
 	virtual void Tick(float DeltaTime) override;
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	// 노티파이에서 호출할 수 있도록 public!
+	// 애니메이션에서 호출할 수 있도록 public!
 	UFUNCTION(BlueprintCallable)
 	void ActivateWeaponCollision();
 
@@ -51,15 +52,16 @@ private:
 	void MakeDecision();
 	void ExecuteState(float DeltaTime);
 	void PerformAttack();
-	void PerformChargeAttack(); // 돌진공격 함수 추가!
+	void PerformChargeAttack(); // 차지어택 함수 추가!
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted);
-	void OnChargeEnd();
+	void PerformDodge(); // 회피 함수 추가
+	void OnDodgeEnd(); // 회피 종료 함수 추가
 
 	UFUNCTION()
 	void OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	
+
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Stats")
@@ -78,11 +80,13 @@ protected:
 	FTimerHandle DecisionTimer;
 	TArray<AActor*> HitActors;
 
-	// 상태 제어 플래그
-	bool bIsCharging;
-	bool bIsChargeAttacking; // 돌진공격 중인지 추가!
-	FTimerHandle ChargeTimer;
-	float CirclingDirection;
+	// 공격 상태 플래그
+	bool bIsChargeAttacking; // 차지어택 진행 중
+
+	// 회피 관련
+	bool bIsDodging;
+	FTimerHandle DodgeTimer;
+	FVector LastPlayerAttackLocation;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
@@ -99,7 +103,7 @@ protected:
 	float ChargeAttackDistance = 1000.0f; // 돌진공격 발동 거리 추가!
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
-	float DecisionInterval = 2.0f;
+	float DecisionInterval = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
 	float RetreatDuration = 1.5f;
@@ -108,7 +112,16 @@ protected:
 	float ChargeDuration = 0.7f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
-	float ChargeAttackDuration = 2.0f; // 돌진공격 지속 시간 추가!
+	float ChargeAttackDuration = 2.0f; // 차지어택 지속 시간 추가!
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
+	float DodgeDistance = 400.0f; // 회피 거리
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
+	float DodgeDuration = 0.5f; // 회피 지속 시간
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Behavior")
+	float DodgeDetectionRange = 500.0f; // 플레이어 공격 감지 범위
 
 	// --- AI 속도 파라미터 ---
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
@@ -124,7 +137,7 @@ protected:
 	float ChargeAttackSpeed = 1800.0f; // 돌진공격 속도 추가!
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Movement")
-	float RotationSpeed = 5.0f;
+	float RotationSpeed = 12.0f;
 
 	// --- AI 전투 파라미터 ---
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Combat")
